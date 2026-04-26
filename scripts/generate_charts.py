@@ -238,6 +238,8 @@ def chart_cumulative_degree_days(daily: pd.DataFrame, year_groups: dict) -> go.F
     fig = go.Figure()
     current_label = _current_heating_label(daily)
     for i, (label, ydf) in enumerate(sorted(year_groups.items())):
+        if label == "2015/16":
+            continue
         is_current = (label == current_label)
         fig.add_trace(go.Scatter(
             x=ydf["doy"], y=ydf["cum_dd"],
