@@ -18,10 +18,12 @@ def load_config():
         return yaml.safe_load(f)
 
 
-def price_for_year(year: int, prices: list) -> tuple[float, float]:
-    applicable = [p for p in prices if p["year"] <= year]
-    p = max(applicable, key=lambda x: x["year"])
-    return p["gas"], p["elec"]
+def _price_series(dates: pd.DatetimeIndex, price_list: list) -> np.ndarray:
+    """Build a per-day price array from a list of {from, price} records sorted by date."""
+    boundaries = pd.to_datetime([p["from"] for p in price_list])
+    values = np.array([p["price"] for p in price_list])
+    idx = np.searchsorted(boundaries, dates, side="right") - 1
+    return values[np.clip(idx, 0, len(values) - 1)]
 
 
 # ── Meter data ────────────────────────────────────────────────────────────────
@@ -125,7 +127,8 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None) -> dict:
     gas_cv = cfg["gas_calorific_kwh_per_m3"]
     base_temp = cfg["base_temperature_c"]
     dd_offset = cfg["degree_day_offset_k"]
-    prices = cfg["energy_prices"]
+    gas_prices  = cfg["gas_prices"]
+    elec_prices = cfg["elec_prices"]
     floor_area = cfg["floor_area_m2"]
 
     meter = load_meter_data(data_dir, cache_dir)
@@ -182,12 +185,9 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None) -> dict:
     daily["elec_annual_kwh"] = daily["use_elec_kwh"].rolling(365, min_periods=180).sum()
 
 
-    # Per-day energy prices
-    year_arr = daily.index.year.to_numpy()
-    price_gas_arr  = np.array([price_for_year(y, prices)[0] for y in year_arr])
-    price_elec_arr = np.array([price_for_year(y, prices)[1] for y in year_arr])
-    daily["price_gas"]  = price_gas_arr
-    daily["price_elec"] = price_elec_arr
+    # Per-day energy prices (date-based)
+    daily["price_gas"]  = _price_series(daily.index, gas_prices)
+    daily["price_elec"] = _price_series(daily.index, elec_prices)
 
     # Annual rolling cost (EUR)
     daily["cost_gas_annual"]   = (daily["use_gas_kwh"]  * daily["price_gas"]).rolling(365, min_periods=180).sum()

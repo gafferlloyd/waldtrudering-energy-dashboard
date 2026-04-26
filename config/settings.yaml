@@ -7,27 +7,54 @@ gas_calorific_kwh_per_m3: 11.266
 meter_sheet_url: "https://docs.google.com/spreadsheets/d/187kPTtFK-VU-vDwUYkEDGgvmM_hgH1WUG0x7Yni9Z1o/export?format=csv"
 weather_sheet_url: "https://docs.google.com/spreadsheets/d/1RR-2DrAqDeNngQxc2Xve4Hi91FKds_gGo_hoZHwItKg/export?format=csv"
 
-# Per-year energy prices (EUR/kWh). The most recent year <= the date is used.
-energy_prices:
-  - year: 2008
-    gas: 0.06
-    elec: 0.20
-  - year: 2016
-    gas: 0.07
-    elec: 0.25
-  - year: 2019
-    gas: 0.08
-    elec: 0.27
-  - year: 2021
-    gas: 0.09
-    elec: 0.286
-  - year: 2022
-    gas: 0.18
-    elec: 0.45
-  - year: 2023
-    gas: 0.22
-    elec: 0.62
-  - year: 2024
-    gas: 0.18
-    elec: 0.50
-  # Add new years here as prices change
+# Date-based electricity prices (EUR/kWh). Price applies from the given date onwards.
+elec_prices:
+  - from: "2008-01-01"
+    price: 0.250   # estimate before first recorded contract
+  - from: "2015-09-21"
+    price: 0.282   # SWM
+  - from: "2016-08-31"
+    price: 0.293   # SWM
+  - from: "2017-08-17"
+    price: 0.294   # SWM
+  - from: "2018-08-19"
+    price: 0.299   # SWM
+  - from: "2019-08-22"
+    price: 0.298   # SWM
+  - from: "2020-08-25"
+    price: 0.296   # SWM
+  - from: "2021-08-16"
+    price: 0.298   # SWM
+  - from: "2022-08-26"
+    price: 0.467   # SWM
+  - from: "2023-07-05"
+    price: 0.286   # Vattenfall
+  - from: "2024-07-28"
+    price: 0.271   # Grünwelt
+  - from: "2025-07-28"
+    price: 0.294   # Naturwelt
+
+# Date-based gas prices (EUR/kWh). Price applies from the given date onwards.
+gas_prices:
+  - from: "2008-01-01"
+    price: 0.066   # SWM (earliest recorded)
+  - from: "2016-08-31"
+    price: 0.061   # SWM
+  - from: "2017-08-17"
+    price: 0.060   # SWM
+  - from: "2018-08-19"
+    price: 0.065   # SWM
+  - from: "2019-08-22"
+    price: 0.070   # SWM
+  - from: "2020-08-25"
+    price: 0.073   # SWM
+  - from: "2021-08-16"
+    price: 0.086   # SWM
+  - from: "2022-08-26"
+    price: 0.190   # SWM
+  - from: "2023-07-05"
+    price: 0.101   # Vattenfall
+  - from: "2024-08-25"
+    price: 0.085   # Octopus
+  - from: "2025-07-11"
+    price: 0.091   # Grünwelt
