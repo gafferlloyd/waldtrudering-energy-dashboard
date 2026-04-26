@@ -1,0 +1,33 @@
+floor_area_m2: 170
+base_temperature_c: 15
+degree_day_offset_k: 3.0   # EU standard adjustment (applied when degree_days > 0)
+gas_calorific_kwh_per_m3: 11.266
+
+# Google Sheet CSV export URLs
+meter_sheet_url: "https://docs.google.com/spreadsheets/d/187kPTtFK-VU-vDwUYkEDGgvmM_hgH1WUG0x7Yni9Z1o/export?format=csv"
+weather_sheet_url: "https://docs.google.com/spreadsheets/d/1RR-2DrAqDeNngQxc2Xve4Hi91FKds_gGo_hoZHwItKg/export?format=csv"
+
+# Per-year energy prices (EUR/kWh). The most recent year <= the date is used.
+energy_prices:
+  - year: 2008
+    gas: 0.06
+    elec: 0.20
+  - year: 2016
+    gas: 0.07
+    elec: 0.25
+  - year: 2019
+    gas: 0.08
+    elec: 0.27
+  - year: 2021
+    gas: 0.09
+    elec: 0.286
+  - year: 2022
+    gas: 0.18
+    elec: 0.45
+  - year: 2023
+    gas: 0.22
+    elec: 0.62
+  - year: 2024
+    gas: 0.18
+    elec: 0.50
+  # Add new years here as prices change

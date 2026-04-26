@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>81827 Waldtrudering Energy Dashboard</title>
+  <script src="https://cdn.plot.ly/plotly-2.32.0.min.js" charset="utf-8"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #1e1e2e;
+      --surface: #181825;
+      --overlay: #313244;
+      --text:    #cdd6f4;
+      --subtext: #a6adc8;
+      --accent:  #89b4fa;
+      --green:   #a6e3a1;
+      --red:     #f38ba8;
+      --yellow:  #f9e2af;
+      --border:  #45475a;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: baseline;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+    header h1 { font-size: 1.4rem; font-weight: 600; color: var(--accent); }
+    header .meta { font-size: 0.8rem; color: var(--subtext); }
+
+    .stats-bar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0.75rem 2rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem 2rem;
+    }
+    .stat {
+      display: flex;
+      flex-direction: column;
+      min-width: 100px;
+    }
+    .stat-label { font-size: 0.7rem; color: var(--subtext); text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat-value { font-size: 1.1rem; font-weight: 600; color: var(--accent); }
+    .stat-unit  { font-size: 0.7rem; color: var(--subtext); }
+
+    main {
+      padding: 1.5rem 2rem;
+    }
+
+    .chart-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.25rem;
+    }
+
+    @media (max-width: 900px) {
+      .chart-grid { grid-template-columns: 1fr; }
+      header, .stats-bar, main { padding-left: 1rem; padding-right: 1rem; }
+    }
+
+    .chart-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    /* Weather chart spans full width */
+    .chart-card.full-width { grid-column: 1 / -1; }
+
+    .chart-card .plotly-graph-div { width: 100% !important; }
+
+    footer {
+      text-align: center;
+      padding: 1.5rem;
+      color: var(--subtext);
+      font-size: 0.75rem;
+      border-top: 1px solid var(--border);
+      margin-top: 1rem;
+    }
+    footer a { color: var(--accent); text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>81827 Waldtrudering Energy Dashboard</h1>
+  <span class="meta">Data through {{ stats.last_update }}</span>
+  <span class="meta" style="margin-left:auto;">Built {{ stats.build_time }}</span>
+</header>
+
+<div class="stats-bar">
+  <div class="stat">
+    <span class="stat-label">Gas — daily / 7d avg</span>
+    <span class="stat-value">{{ stats.gas_daily_kwh }} <span class="stat-unit">kWh</span></span>
+    <span class="stat-unit">{{ stats.gas_daily7_kwh }} kWh avg</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Gas — annual</span>
+    <span class="stat-value">{{ stats.gas_annual_mwh }}</span>
+    <span class="stat-unit">MWh / year</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Electricity — daily / 7d avg</span>
+    <span class="stat-value">{{ stats.elec_daily_kwh }} <span class="stat-unit">kWh</span></span>
+    <span class="stat-unit">{{ stats.elec_daily7_kwh }} kWh avg</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Electricity — annual</span>
+    <span class="stat-value">{{ stats.elec_annual_mwh }}</span>
+    <span class="stat-unit">MWh / year</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Water — daily / 7d avg</span>
+    <span class="stat-value">{{ stats.water_daily_m3 }} <span class="stat-unit">m³</span></span>
+    <span class="stat-unit">{{ stats.water_daily7_m3 }} m³ avg</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Water — annual</span>
+    <span class="stat-value">{{ stats.water_annual_m3 | int }}</span>
+    <span class="stat-unit">m³ / year</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Annual Cost</span>
+    <span class="stat-value">€{{ "{:,}".format(stats.annual_cost_eur) }}</span>
+    <span class="stat-unit">gas + electricity</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Efficiency</span>
+    <span class="stat-value">{{ stats.efficiency_kwh_m2 }}</span>
+    <span class="stat-unit">kWh / m² / year</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Hot Water Baseline</span>
+    <span class="stat-value">{{ stats.hot_water_kwh }}</span>
+    <span class="stat-unit">kWh / day</span>
+  </div>
+</div>
+
+<main>
+  <div class="chart-grid">
+    {% for chart in charts %}
+    <div class="chart-card{% if chart.id == 'chart_weather' %} full-width{% endif %}"
+         id="card_{{ chart.id }}">
+      <div id="{{ chart.id }}"></div>
+    </div>
+    {% endfor %}
+  </div>
+</main>
+
+<footer>
+  Meter readings entered manually into
+  <a href="https://docs.google.com/spreadsheets/d/187kPTtFK-VU-vDwUYkEDGgvmM_hgH1WUG0x7Yni9Z1o" target="_blank">
+    Google Sheets</a> ·
+  Weather data from
+  <a href="https://www.meteo.physik.uni-muenchen.de" target="_blank">LMU Munich</a> ·
+  Built with Python + Plotly ·
+  <a href="https://github.com" target="_blank">Source</a>
+</footer>
+
+<script>
+  const config = { responsive: true, displayModeBar: false };
+
+  {% for chart in charts %}
+  (function() {
+    const spec = {{ chart.json | safe }};
+    Plotly.newPlot("{{ chart.id }}", spec.data, spec.layout, config);
+  })();
+  {% endfor %}
+</script>
+
+</body>
+</html>
