@@ -14,7 +14,7 @@ Steps:
 import argparse
 import json
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
@@ -89,6 +89,37 @@ def main():
         s = daily[col].replace(0, float("nan"))
         return float(s.rolling(7, min_periods=1).mean().dropna().iloc[-1]) if len(s.dropna()) else 0.0
 
+    # Sum of 7 days ending `offset_days` before the latest date (skips zeros)
+    def sum7_at(col, offset_days=0):
+        s = daily[col].replace(0, float("nan"))
+        end_date = s.index[-1] - timedelta(days=offset_days)
+        window = s.loc[:end_date].iloc[-7:]
+        valid = window.dropna()
+        return float(valid.sum()) if len(valid) >= 4 else None
+
+    # Value of a rolling-annual column `offset_days` before the latest date
+    def annual_at(col, offset_days=0):
+        s = daily[col].dropna()
+        if len(s) == 0:
+            return None
+        if offset_days == 0:
+            return float(s.iloc[-1])
+        target = s.index[-1] - timedelta(days=offset_days)
+        available = s[s.index <= target]
+        return float(available.iloc[-1]) if len(available) > 0 else None
+
+    def trend_pct(current, previous):
+        if current is None or previous is None or previous == 0:
+            return None
+        return round((current - previous) / abs(previous) * 100, 1)
+
+    _water_rolling = daily["use_water_m3"].rolling(365, min_periods=180).sum().dropna()
+    _water_now  = float(_water_rolling.iloc[-1]) if len(_water_rolling) else None
+    _water_prev_s = _water_rolling[_water_rolling.index <= _water_rolling.index[-1] - timedelta(days=365)] \
+                    if len(_water_rolling) else None
+    _water_prev = float(_water_prev_s.iloc[-1]) if _water_prev_s is not None and len(_water_prev_s) > 0 else None
+    water_annual_trend = trend_pct(_water_now, _water_prev)
+
     stats = {
         "last_update":       daily.index[-1].strftime("%d %b %Y"),
         "build_time":        datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
@@ -107,6 +138,14 @@ def main():
         "annual_cost_eur":   round(annual("cost_total_annual")),
         "efficiency_kwh_m2": round(annual("efficiency_kwh_m2"), 1),
         "hot_water_kwh":     round(data["hot_water_kwh"], 1),
+        # Trend vs same period 1 year ago (percentage change, None if unavailable)
+        "gas_7d_trend":      trend_pct(sum7_at("use_gas_kwh"), sum7_at("use_gas_kwh", 365)),
+        "elec_7d_trend":     trend_pct(sum7_at("use_elec_kwh"), sum7_at("use_elec_kwh", 365)),
+        "water_7d_trend":    trend_pct(sum7_at("use_water_m3"), sum7_at("use_water_m3", 365)),
+        "gas_annual_trend":  trend_pct(annual_at("gas_annual_kwh"), annual_at("gas_annual_kwh", 365)),
+        "elec_annual_trend": trend_pct(annual_at("elec_annual_kwh"), annual_at("elec_annual_kwh", 365)),
+        "water_annual_trend":water_annual_trend,
+        "cost_annual_trend": trend_pct(annual_at("cost_total_annual"), annual_at("cost_total_annual", 365)),
     }
 
     # ── 5. Render HTML ────────────────────────────────────────────────────────
