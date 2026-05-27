@@ -47,22 +47,37 @@ def _smooth(series: pd.Series, window: int) -> pd.Series:
 
 def chart_annual_gas(daily: pd.DataFrame, hot_water_kwh: float) -> go.Figure:
     fig = go.Figure()
-    yr1 = daily["gas_annual_kwh"].dropna() / 1000  # MWh
+
+    # Primary axis: heating efficiency kWh/m²/yr
+    eff1 = daily["efficiency_kwh_m2"].dropna()
+    eff3 = daily["efficiency_3yr_kwh_m2"].dropna()
+    fig.add_trace(go.Scatter(x=eff1.index, y=eff1.values,
+                             name="Efficiency 1yr",
+                             line=dict(color=_PALETTE[0], width=1, dash="dot"),
+                             opacity=0.6))
+    fig.add_trace(go.Scatter(x=eff3.index, y=eff3.values,
+                             name="Efficiency 3yr",
+                             line=dict(color=_PALETTE[0], width=2.5)))
+
+    # Secondary axis: absolute gas use MWh/yr
+    yr1 = daily["gas_annual_kwh"].dropna() / 1000
     yr3 = daily["use_gas_kwh"].rolling(3 * 365, min_periods=365).sum().dropna() / 3000
-
     fig.add_trace(go.Scatter(x=yr1.index, y=yr1.values,
-                             name="Last 12 months", line=dict(color=_PALETTE[0])))
+                             name="Gas 1yr",
+                             line=dict(color=_PALETTE[1], width=1, dash="dot"),
+                             yaxis="y2", opacity=0.6))
     fig.add_trace(go.Scatter(x=yr3.index, y=yr3.values,
-                             name="3-year average", line=dict(color=_PALETTE[1])))
+                             name="Gas 3yr avg",
+                             line=dict(color=_PALETTE[1], width=2),
+                             yaxis="y2"))
 
-    hw_mwh = hot_water_kwh * 365 / 1000
-    fig.add_hline(y=hw_mwh, line_dash="dash", line_color="#C44E52",
-                  annotation_text=f"Hot water ~{hw_mwh:.1f} MWh/yr",
-                  annotation_position="top right")
-
-    fig.update_layout(title="Annual Gas Use (rolling)",
-                      xaxis_title="Date", yaxis_title="MWh / year",
-                      yaxis=dict(range=[0, 25]))
+    fig.update_layout(
+        title="Annual Gas Use & Heating Efficiency (rolling)",
+        xaxis_title="Date",
+        yaxis=dict(title="kWh / m² / year"),
+        yaxis2=dict(title="MWh / year", overlaying="y", side="right",
+                    range=[0, 25], showgrid=False),
+    )
     return fig
 
 

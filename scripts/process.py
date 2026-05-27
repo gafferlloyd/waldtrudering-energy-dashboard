@@ -194,8 +194,11 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None) -> dict:
     daily["cost_elec_annual"]  = (daily["use_elec_kwh"] * daily["price_elec"]).rolling(365, min_periods=180).sum()
     daily["cost_total_annual"] = daily["cost_gas_annual"] + daily["cost_elec_annual"]
 
-    # Efficiency per m²
-    daily["efficiency_kwh_m2"] = daily["gas_annual_kwh"] / floor_area
+    # Efficiency per m²  (1-year rolling and 3-year rolling)
+    daily["efficiency_kwh_m2"]     = daily["gas_annual_kwh"] / floor_area
+    daily["efficiency_3yr_kwh_m2"] = (
+        daily["use_gas_kwh"].rolling(3 * 365, min_periods=365).sum() / (floor_area * 3)
+    )
 
     # ── Year-by-year data: heating years (Jul 1 → Jun 30) ────────────────────
     # Starting in July puts winter in the middle of the x-axis.
