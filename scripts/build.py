@@ -42,23 +42,7 @@ def main():
     else:
         print("Step 1: Skipped (--skip-fetch)")
 
-    # ── 1b. Scrape LMU weather ────────────────────────────────────────────────
-    if not args.skip_fetch:
-        print("Step 1b: Scraping LMU Garching weather…")
-        import scrape_weather, csv as _csv
-        from datetime import date as _date
-        rows = scrape_weather.scrape(from_ym="2026-01")
-        if rows:
-            lmu_path = cache_dir / "lmu_weather.csv"
-            with open(lmu_path, "w", newline="") as f:
-                w = _csv.DictWriter(f, fieldnames=["date","tmax","tmit","tmin","rain","sunshine"])
-                w.writeheader()
-                w.writerows(rows)
-            print(f"  {len(rows)} rows written to cache/lmu_weather.csv")
-        else:
-            print("  Warning: no LMU weather rows fetched")
-
-    # ── 1c. Fetch DWD airport weather ────────────────────────────────────────
+    # ── 1b. Fetch DWD airport weather ────────────────────────────────────────
     if not args.skip_fetch:
         print("Step 1c: Fetching DWD München-Flughafen weather…")
         import fetch_dwd_weather

@@ -146,28 +146,20 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None) -> dict:
     floor_area = cfg["floor_area_m2"]
 
     meter = load_meter_data(data_dir, cache_dir)
-    weather_lmu = load_weather_data(data_dir, cache_dir)
     weather_dwd = load_dwd_weather(cache_dir)
 
-    # Extend date range to cover DWD if it runs further than LMU
-    if weather_dwd is not None and weather_dwd.index.max() > weather_lmu.index.max():
-        date_end = weather_dwd.index.max()
-    else:
-        date_end = weather_lmu.index.max()
-    date_range = pd.date_range(weather_lmu.index.min(), date_end, freq="D")
+    if weather_dwd is None:
+        raise RuntimeError("DWD weather data not found — run fetch_dwd_weather.py first")
 
-    weather = weather_lmu  # alias used below
+    # Date range: first date with all three meter readings → DWD end.
+    # Early archive rows have only 1-2 utilities; skip those.
+    first_complete = meter.dropna(how="any").index.min()
+    date_range = pd.date_range(first_complete, weather_dwd.index.max(), freq="D")
 
-    # Reindex weather; interpolate small gaps
-    w = weather.reindex(date_range)
+    # Reindex DWD weather; interpolate small gaps
+    w = weather_dwd.reindex(date_range)
     for col in ["tmax", "tmit", "tmin", "rain", "sunshine"]:
         w[col] = w[col].interpolate(method="index", limit=7)
-
-    # Patch sunshine with DWD airport data — LMU sunshine series has quality issues.
-    # DWD values where available; LMU fills remaining gaps.
-    if weather_dwd is not None:
-        dwd_sun = weather_dwd["sunshine"].reindex(date_range)
-        w["sunshine"] = dwd_sun.fillna(w["sunshine"])
 
     # Reindex meter readings and interpolate
     m = meter.reindex(date_range)
@@ -259,7 +251,6 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None) -> dict:
         "recent_gas_doy":   recent_gas_doy,
         "config":           cfg,
         "meter_raw":        meter_raw,
-        "weather_lmu":      weather_lmu,
         "weather_dwd":      weather_dwd,
     }
 
