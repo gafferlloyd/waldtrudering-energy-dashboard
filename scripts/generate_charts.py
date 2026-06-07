@@ -316,6 +316,44 @@ def chart_annual_cost(daily: pd.DataFrame) -> go.Figure:
     return fig
 
 
+def chart_weather_sources(lmu: pd.DataFrame, dwd: pd.DataFrame | None) -> go.Figure:
+    """Compare LMU Garching vs DWD München-Flughafen: sunshine and temperature."""
+    fig = make_subplots(rows=2, cols=1, shared_xaxes=True,
+                        subplot_titles=("Annual sunshine (rolling sum, hours/year)",
+                                        "Annual mean temperature (rolling avg, °C)"))
+    roll = dict(window=365, min_periods=180)
+
+    def add_pair(series_lmu, series_dwd, row, name_lmu, name_dwd, col_lmu, col_dwd):
+        s = series_lmu.rolling(**roll)
+        agg = s.sum() if row == 1 else s.mean()
+        agg = agg.dropna()
+        if len(agg):
+            fig.add_trace(go.Scatter(x=agg.index, y=agg.values, name=name_lmu,
+                                     line=dict(color=col_lmu, width=1.5)), row=row, col=1)
+        if series_dwd is not None:
+            s2 = series_dwd.rolling(**roll)
+            agg2 = s2.sum() if row == 1 else s2.mean()
+            agg2 = agg2.dropna()
+            if len(agg2):
+                fig.add_trace(go.Scatter(x=agg2.index, y=agg2.values, name=name_dwd,
+                                         line=dict(color=col_dwd, width=1.5, dash="dot")),
+                              row=row, col=1)
+
+    dwd_sun  = dwd["sunshine"] if dwd is not None else None
+    dwd_tmit = dwd["tmit"]     if dwd is not None else None
+
+    add_pair(lmu["sunshine"], dwd_sun,  1,
+             "Sunshine LMU Garching", "Sunshine DWD Airport",
+             _PALETTE[0], _PALETTE[1])
+    add_pair(lmu["tmit"],     dwd_tmit, 2,
+             "Temp LMU Garching",     "Temp DWD Airport",
+             _PALETTE[2], _PALETTE[3])
+
+    fig.update_layout(title="Weather Source Comparison: LMU Garching vs DWD München-Flughafen",
+                      height=500)
+    return fig
+
+
 def chart_weather(daily: pd.DataFrame) -> go.Figure:
     movar = 365
     fig = make_subplots(rows=2, cols=3, shared_xaxes=False,
@@ -421,6 +459,8 @@ def build_all(data: dict) -> list[dict]:
     year_groups = data["year_groups"]
     median_doy  = data["median_gas_doy"]
     recent_doy  = data["recent_gas_doy"]
+    weather_lmu = data.get("weather_lmu")
+    weather_dwd = data.get("weather_dwd")
 
     charts = [
         ("Annual Gas Use",          "chart_gas",      chart_annual_gas(daily, hot_water)),
@@ -434,6 +474,8 @@ def build_all(data: dict) -> list[dict]:
         ("Annual Energy Cost",      "chart_cost",     chart_annual_cost(daily)),
         ("Gas Energy vs Degree Days", "chart_gdd",    chart_gas_degree_day_scatter(daily, year_groups)),
         ("Weather Overview",        "chart_weather",  chart_weather(daily)),
+        ("Weather Sources",         "chart_weather_sources",
+                                    chart_weather_sources(weather_lmu, weather_dwd)),
     ]
 
     result = []

@@ -97,6 +97,20 @@ def _load_weather_fresh(path: Path) -> pd.DataFrame:
         return df.dropna(subset=["date"])
 
 
+def load_dwd_weather(cache_dir: Path | None = None) -> pd.DataFrame | None:
+    """Load DWD airport weather from cache/dwd_weather.csv, or None if absent."""
+    if cache_dir is None:
+        return None
+    path = cache_dir / "dwd_weather.csv"
+    if not path.exists():
+        return None
+    df = pd.read_csv(path, parse_dates=["date"])
+    df = df[["date", "tmax", "tmit", "tmin", "rain", "sunshine"]].dropna(subset=["date"])
+    for col in ["tmax", "tmit", "tmin", "rain", "sunshine"]:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+    return df.sort_values("date").set_index("date")
+
+
 def load_weather_data(data_dir: Path, cache_dir: Path | None = None) -> pd.DataFrame:
     frames = [_load_weather_archive(data_dir / "weather_archive.csv")]
     if cache_dir:
@@ -132,15 +146,28 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None) -> dict:
     floor_area = cfg["floor_area_m2"]
 
     meter = load_meter_data(data_dir, cache_dir)
-    weather = load_weather_data(data_dir, cache_dir)
+    weather_lmu = load_weather_data(data_dir, cache_dir)
+    weather_dwd = load_dwd_weather(cache_dir)
 
-    # Full daily date range driven by weather
-    date_range = pd.date_range(weather.index.min(), weather.index.max(), freq="D")
+    # Extend date range to cover DWD if it runs further than LMU
+    if weather_dwd is not None and weather_dwd.index.max() > weather_lmu.index.max():
+        date_end = weather_dwd.index.max()
+    else:
+        date_end = weather_lmu.index.max()
+    date_range = pd.date_range(weather_lmu.index.min(), date_end, freq="D")
+
+    weather = weather_lmu  # alias used below
 
     # Reindex weather; interpolate small gaps
     w = weather.reindex(date_range)
     for col in ["tmax", "tmit", "tmin", "rain", "sunshine"]:
         w[col] = w[col].interpolate(method="index", limit=7)
+
+    # Patch sunshine with DWD airport data — LMU sunshine series has quality issues.
+    # DWD values where available; LMU fills remaining gaps.
+    if weather_dwd is not None:
+        dwd_sun = weather_dwd["sunshine"].reindex(date_range)
+        w["sunshine"] = dwd_sun.fillna(w["sunshine"])
 
     # Reindex meter readings and interpolate
     m = meter.reindex(date_range)
@@ -232,6 +259,8 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None) -> dict:
         "recent_gas_doy":   recent_gas_doy,
         "config":           cfg,
         "meter_raw":        meter_raw,
+        "weather_lmu":      weather_lmu,
+        "weather_dwd":      weather_dwd,
     }
 
 

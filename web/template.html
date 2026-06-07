@@ -171,7 +171,7 @@
 <main>
   <div class="chart-grid">
     {% for chart in charts %}
-    <div class="chart-card{% if chart.id == 'chart_weather' %} full-width{% endif %}"
+    <div class="chart-card{% if chart.id in ('chart_weather', 'chart_weather_sources') %} full-width{% endif %}"
          id="card_{{ chart.id }}">
       <div id="{{ chart.id }}"></div>
     </div>

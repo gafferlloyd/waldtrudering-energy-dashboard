@@ -58,6 +58,12 @@ def main():
         else:
             print("  Warning: no LMU weather rows fetched")
 
+    # ── 1c. Fetch DWD airport weather ────────────────────────────────────────
+    if not args.skip_fetch:
+        print("Step 1c: Fetching DWD München-Flughafen weather…")
+        import fetch_dwd_weather
+        fetch_dwd_weather.fetch(cache_dir)
+
     # ── 2. Process ────────────────────────────────────────────────────────────
     print("Step 2: Processing data…")
     import process
