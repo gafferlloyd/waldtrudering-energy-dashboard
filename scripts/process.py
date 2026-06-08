@@ -230,6 +230,10 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None) -> dict:
         ydf = daily[start:end].copy()
         if len(ydf) < 30:
             continue
+        # Drop years that don't start within 30 days of Jul 1 — a late start
+        # shifts the doy counter and makes the trace appear x-offset vs full years.
+        if ydf.index[0] > start + pd.Timedelta(days=30):
+            continue
         ydf["doy"]         = range(1, len(ydf) + 1)
         ydf["cum_gas_kwh"] = ydf["use_gas_kwh"].fillna(0).cumsum()
         ydf["cum_dd"]      = ydf["degree_days"].fillna(0).cumsum()
