@@ -336,8 +336,12 @@ def chart_weather(daily: pd.DataFrame, weather_dwd: pd.DataFrame | None = None) 
     sun_pot = 6.5 + 3.5 * np.sin(-np.pi / 2 - 3 * np.pi / 32 + doy_arr * 2 * np.pi / 365)
     sunny   = w["sunshine"] > sun_pot
 
-    roll_kw = dict(window=movar, min_periods=movar)
-    def roll(s): return s.rolling(**roll_kw).mean()
+    # min_periods=movar//2 tolerates scattered missing days (e.g. 1 in 1999,
+    # 4 in 2002-03) without cascading 365-day gaps. Traces are clipped to
+    # chart_start so the partial-window ramp-up at t=0 is never shown.
+    roll_kw    = dict(window=movar, min_periods=movar // 2)
+    chart_start = w.index[0] + pd.Timedelta(days=movar)
+    def roll(s): return s.rolling(**roll_kw).mean().loc[chart_start:]
 
     # ── 30-year reference period (WMO 1992–2021) ─────────────────────────────
     REF_START, REF_END = "1992-01-01", "2021-12-31"
