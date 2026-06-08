@@ -316,8 +316,12 @@ def chart_annual_cost(daily: pd.DataFrame) -> go.Figure:
     return fig
 
 
-def chart_weather(daily: pd.DataFrame) -> go.Figure:
+def chart_weather(daily: pd.DataFrame, weather_dwd: pd.DataFrame | None = None) -> go.Figure:
     movar = 365
+    # Use full DWD history (1992–) so rolling averages are warmed up before
+    # the meter data starts in 2016. Fall back to daily if not available.
+    w = weather_dwd if weather_dwd is not None else daily
+
     fig = make_subplots(rows=2, cols=3, shared_xaxes=False,
                         subplot_titles=(
                             "Temperatures (annual avg)",
@@ -328,55 +332,93 @@ def chart_weather(daily: pd.DataFrame) -> go.Figure:
                             "Sunshine:Rain Ratio",
                         ))
 
-    # Compute sunny-day potential
-    doy_arr  = daily.index.dayofyear.to_numpy()
-    sun_pot  = 6.5 + 3.5 * np.sin(-np.pi / 2 - 3 * np.pi / 32 + doy_arr * 2 * np.pi / 365)
-    sunny    = daily["sunshine"] > sun_pot
+    doy_arr = w.index.dayofyear.to_numpy()
+    sun_pot = 6.5 + 3.5 * np.sin(-np.pi / 2 - 3 * np.pi / 32 + doy_arr * 2 * np.pi / 365)
+    sunny   = w["sunshine"] > sun_pot
 
-    roll_kw  = dict(window=movar, min_periods=movar // 2)
-
+    roll_kw = dict(window=movar, min_periods=movar // 2)
     def roll(s): return s.rolling(**roll_kw).mean()
 
+    # ── 30-year reference period (WMO 1992–2021) ─────────────────────────────
+    REF_START, REF_END = "1992-01-01", "2021-12-31"
+    ref = w.loc[REF_START:REF_END]
+    ref_doy  = ref.index.dayofyear.to_numpy()
+    ref_spot = 6.5 + 3.5 * np.sin(-np.pi / 2 - 3 * np.pi / 32 + ref_doy * 2 * np.pi / 365)
+    ref_sunny = ref["sunshine"] > ref_spot
+
+    def ref_annual(s):
+        """Mean annual total for a daily series over the reference period."""
+        return s.mean() * movar
+
+    refs = {
+        "tmin": ref["tmin"].mean(),
+        "tmit": ref["tmit"].mean(),
+        "tmax": ref["tmax"].mean(),
+        "sunny":      ref_annual(ref_sunny.astype(float)),
+        "heavy_rain": ref_annual((ref["rain"] > 5).astype(float)),
+        "rainfall":   ref_annual(ref["rain"]),
+        "sunshine":   ref_annual(ref["sunshine"]),
+        "d20": ref_annual((ref["tmax"] >= 20).astype(float)),
+        "d25": ref_annual((ref["tmax"] >= 25).astype(float)),
+        "d30": ref_annual((ref["tmax"] >= 30).astype(float)),
+        "frost": ref_annual((ref["tmin"] <= 0).astype(float)),
+        "ice":   ref_annual((ref["tmax"] <= 0).astype(float)),
+    }
+    _rain_ref = ref["rain"].mean()
+    refs["sun_rain"] = ref["sunshine"].mean() / _rain_ref if _rain_ref > 0 else np.nan
+
+    REF_STYLE = dict(line_dash="dot", line_width=1.2, opacity=0.7)
+
+    # ── Traces ────────────────────────────────────────────────────────────────
     # Row 1 col 1 — temperatures
     for col, name, clr in [("tmin","Min","#64B5CD"),("tmit","Mean","#55A868"),("tmax","Max","#C44E52")]:
-        s = roll(daily[col]).dropna()
+        s = roll(w[col]).dropna()
         fig.add_trace(go.Scatter(x=s.index, y=s.values, name=name,
                                  line=dict(color=clr), showlegend=True), row=1, col=1)
+        fig.add_hline(y=refs[col], line_color=clr, **REF_STYLE, row=1, col=1)
 
     # Row 1 col 2 — sunny & heavy rain days
-    for series, name, clr in [(sunny.astype(float), "Sunny", "#CCB974"),
-                               ((daily["rain"] > 5).astype(float), "Hvy Rain", "#4C72B0")]:
+    for series, name, clr, rk in [(sunny.astype(float), "Sunny", "#CCB974", "sunny"),
+                                   ((w["rain"] > 5).astype(float), "Hvy Rain", "#4C72B0", "heavy_rain")]:
         s = (roll(series) * movar).dropna()
         fig.add_trace(go.Scatter(x=s.index, y=s.values, name=name,
                                  line=dict(color=clr), showlegend=True), row=1, col=2)
+        fig.add_hline(y=refs[rk], line_color=clr, **REF_STYLE, row=1, col=2)
 
     # Row 1 col 3 — annual rainfall & sunshine
-    for series, name, clr in [(daily["rain"], "Rainfall mm", "#4C72B0"),
-                               (daily["sunshine"], "Sunshine hrs", "#CCB974")]:
+    for series, name, clr, rk in [(w["rain"], "Rainfall mm", "#4C72B0", "rainfall"),
+                                   (w["sunshine"], "Sunshine hrs", "#CCB974", "sunshine")]:
         s = (roll(series) * movar).dropna()
         fig.add_trace(go.Scatter(x=s.index, y=s.values, name=name,
                                  line=dict(color=clr), showlegend=True), row=1, col=3)
+        fig.add_hline(y=refs[rk], line_color=clr, **REF_STYLE, row=1, col=3)
 
     # Row 2 col 1 — warm/hot days
-    for thr, name, clr in [(20, ">20°C", "#64B5CD"), (25, ">25°C", "#55A868"), (30, ">30°C", "#C44E52")]:
-        s = (roll((daily["tmax"] >= thr).astype(float)) * movar).dropna()
+    for thr, name, clr, rk in [(20,">20°C","#64B5CD","d20"),(25,">25°C","#55A868","d25"),(30,">30°C","#C44E52","d30")]:
+        s = (roll((w["tmax"] >= thr).astype(float)) * movar).dropna()
         fig.add_trace(go.Scatter(x=s.index, y=s.values, name=name,
                                  line=dict(color=clr), showlegend=True), row=2, col=1)
+        fig.add_hline(y=refs[rk], line_color=clr, **REF_STYLE, row=2, col=1)
 
     # Row 2 col 2 — frost & ice
-    for series, name, clr in [((daily["tmin"] <= 0).astype(float), "Frost days", "#64B5CD"),
-                               ((daily["tmax"] <= 0).astype(float), "Ice days",   "#4C72B0")]:
+    for series, name, clr, rk in [((w["tmin"] <= 0).astype(float), "Frost days", "#64B5CD", "frost"),
+                                   ((w["tmax"] <= 0).astype(float), "Ice days",   "#4C72B0", "ice")]:
         s = (roll(series) * movar).dropna()
         fig.add_trace(go.Scatter(x=s.index, y=s.values, name=name,
                                  line=dict(color=clr), showlegend=True), row=2, col=2)
+        fig.add_hline(y=refs[rk], line_color=clr, **REF_STYLE, row=2, col=2)
 
     # Row 2 col 3 — sunshine:rain ratio
-    rain_r = roll(daily["rain"]).replace(0, np.nan)
-    ratio  = (roll(daily["sunshine"]) / rain_r).dropna()
+    rain_r = roll(w["rain"]).replace(0, np.nan)
+    ratio  = (roll(w["sunshine"]) / rain_r).dropna()
     fig.add_trace(go.Scatter(x=ratio.index, y=ratio.values, name="Sun:Rain",
                              line=dict(color=_PALETTE[4]), showlegend=True), row=2, col=3)
+    fig.add_hline(y=refs["sun_rain"], line_color=_PALETTE[4], **REF_STYLE, row=2, col=3)
 
-    fig.update_layout(title="Weather Overview (rolling annual)", height=600)
+    fig.update_layout(
+        title="Weather Overview (rolling annual)  ·  dotted = 1992–2021 mean",
+        height=600,
+    )
     return fig
 
 
@@ -421,6 +463,7 @@ def build_all(data: dict) -> list[dict]:
     year_groups = data["year_groups"]
     median_doy  = data["median_gas_doy"]
     recent_doy  = data["recent_gas_doy"]
+    weather_dwd = data.get("weather_dwd")
     charts = [
         ("Annual Gas Use",          "chart_gas",      chart_annual_gas(daily, hot_water)),
         ("Electricity Use",         "chart_elec",     chart_electricity(daily)),
@@ -432,7 +475,7 @@ def build_all(data: dict) -> list[dict]:
         ("Efficiency Development",  "chart_eff_trend",chart_efficiency_trend(daily)),
         ("Annual Energy Cost",      "chart_cost",     chart_annual_cost(daily)),
         ("Gas Energy vs Degree Days", "chart_gdd",    chart_gas_degree_day_scatter(daily, year_groups)),
-        ("Weather Overview",        "chart_weather",  chart_weather(daily)),
+        ("Weather Overview",        "chart_weather",  chart_weather(daily, weather_dwd)),
     ]
 
     result = []
