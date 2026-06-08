@@ -47,10 +47,12 @@ def _smooth(series: pd.Series, window: int) -> pd.Series:
 
 def chart_annual_gas(daily: pd.DataFrame, hot_water_kwh: float) -> go.Figure:
     fig = go.Figure()
+    _s1 = daily.index[0] + pd.Timedelta(days=365)
+    _s3 = daily.index[0] + pd.Timedelta(days=3 * 365)
 
     # Primary axis: heating efficiency kWh/m²/yr
-    eff1 = daily["efficiency_kwh_m2"].dropna()
-    eff3 = daily["efficiency_3yr_kwh_m2"].dropna()
+    eff1 = daily["efficiency_kwh_m2"].loc[_s1:].dropna()
+    eff3 = daily["efficiency_3yr_kwh_m2"].loc[_s3:].dropna()
     fig.add_trace(go.Scatter(x=eff1.index, y=eff1.values,
                              name="Efficiency 1yr",
                              line=dict(color=_PALETTE[0], width=1, dash="dot"),
@@ -60,8 +62,8 @@ def chart_annual_gas(daily: pd.DataFrame, hot_water_kwh: float) -> go.Figure:
                              line=dict(color=_PALETTE[0], width=2.5)))
 
     # Secondary axis: absolute gas use MWh/yr
-    yr1 = daily["gas_annual_kwh"].dropna() / 1000
-    yr3 = daily["use_gas_kwh"].rolling(3 * 365, min_periods=365).sum().dropna() / 3000
+    yr1 = daily["gas_annual_kwh"].loc[_s1:].dropna() / 1000
+    yr3 = daily["use_gas_kwh"].rolling(3 * 365, min_periods=365).sum().loc[_s3:].dropna() / 3000
     fig.add_trace(go.Scatter(x=yr1.index, y=yr1.values,
                              name="Gas 1yr",
                              line=dict(color=_PALETTE[1], width=1, dash="dot"),
@@ -83,7 +85,8 @@ def chart_annual_gas(daily: pd.DataFrame, hot_water_kwh: float) -> go.Figure:
 
 def chart_electricity(daily: pd.DataFrame) -> go.Figure:
     fig = go.Figure()
-    elec_ann = daily["elec_annual_kwh"].dropna() / 1000
+    _s1 = daily.index[0] + pd.Timedelta(days=365)
+    elec_ann = daily["elec_annual_kwh"].loc[_s1:].dropna() / 1000
 
     fig.add_trace(go.Scatter(x=daily.index, y=daily["elec_ma7"],
                              name="7-day avg", line=dict(color=_PALETTE[2], width=1),
@@ -104,9 +107,10 @@ def chart_electricity(daily: pd.DataFrame) -> go.Figure:
 
 def chart_water(daily: pd.DataFrame) -> go.Figure:
     fig = go.Figure()
+    _s1 = daily.index[0] + pd.Timedelta(days=365)
     fig.add_trace(go.Scatter(x=daily.index, y=daily["water_ma7"],
                              name="7-day avg", line=dict(color=_PALETTE[2], width=1)))
-    water_ann = (daily["use_water_m3"].rolling(365, min_periods=180).sum()).dropna()
+    water_ann = daily["use_water_m3"].rolling(365, min_periods=180).sum().loc[_s1:].dropna()
     fig.add_trace(go.Scatter(x=water_ann.index, y=water_ann.values,
                              name="Annual (rolling)", line=dict(color=_PALETTE[0], width=2),
                              yaxis="y2"))
@@ -274,14 +278,16 @@ def chart_cumulative_degree_days(daily: pd.DataFrame, year_groups: dict) -> go.F
 def chart_efficiency_trend(daily: pd.DataFrame) -> go.Figure:
     """Long-term heating efficiency: rolling annual and 3-year gas kWh per degree-day."""
     fig = go.Figure()
+    _s1 = daily.index[0] + pd.Timedelta(days=365)
+    _s3 = daily.index[0] + pd.Timedelta(days=3 * 365)
 
     gas = daily["use_gas_kwh"].fillna(0)
     dd  = daily["degree_days"].fillna(0)
 
     eff1 = (gas.rolling(365, min_periods=180).sum() /
-            dd.rolling(365, min_periods=180).sum().replace(0, np.nan)).dropna()
+            dd.rolling(365, min_periods=180).sum().replace(0, np.nan)).loc[_s1:].dropna()
     eff3 = (gas.rolling(3 * 365, min_periods=365).sum() /
-            dd.rolling(3 * 365, min_periods=365).sum().replace(0, np.nan)).dropna()
+            dd.rolling(3 * 365, min_periods=365).sum().replace(0, np.nan)).loc[_s3:].dropna()
 
     fig.add_trace(go.Scatter(x=eff1.index, y=eff1.values,
                              name="1-year mean", line=dict(color=_PALETTE[0], width=1.5)))
@@ -299,9 +305,10 @@ def chart_efficiency_trend(daily: pd.DataFrame) -> go.Figure:
 
 def chart_annual_cost(daily: pd.DataFrame) -> go.Figure:
     fig = go.Figure()
-    gas_cost  = daily["cost_gas_annual"].dropna() / 1000   # kEUR
-    elec_cost = daily["cost_elec_annual"].dropna() / 1000
-    total     = daily["cost_total_annual"].dropna() / 1000
+    _s1 = daily.index[0] + pd.Timedelta(days=365)
+    gas_cost  = daily["cost_gas_annual"].loc[_s1:].dropna() / 1000   # kEUR
+    elec_cost = daily["cost_elec_annual"].loc[_s1:].dropna() / 1000
+    total     = daily["cost_total_annual"].loc[_s1:].dropna() / 1000
 
     fig.add_trace(go.Scatter(x=total.index, y=total.values,
                              name="Total", line=dict(color=_PALETTE[0], width=2)))
