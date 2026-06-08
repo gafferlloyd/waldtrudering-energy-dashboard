@@ -336,7 +336,7 @@ def chart_weather(daily: pd.DataFrame, weather_dwd: pd.DataFrame | None = None) 
     sun_pot = 6.5 + 3.5 * np.sin(-np.pi / 2 - 3 * np.pi / 32 + doy_arr * 2 * np.pi / 365)
     sunny   = w["sunshine"] > sun_pot
 
-    roll_kw = dict(window=movar, min_periods=movar // 2)
+    roll_kw = dict(window=movar, min_periods=movar)
     def roll(s): return s.rolling(**roll_kw).mean()
 
     # ── 30-year reference period (WMO 1992–2021) ─────────────────────────────
