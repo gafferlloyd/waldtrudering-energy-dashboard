@@ -8,6 +8,7 @@ Missing / invalid values (-999) become empty (NaN when read back).
 """
 import csv
 import io
+import re
 import sys
 import zipfile
 from datetime import date
@@ -18,8 +19,22 @@ ROOT = Path(__file__).parent.parent
 STATION = "01262"
 _BASE = ("https://opendata.dwd.de/climate_environment/CDC"
          "/observations_germany/climate/daily/kl")
-HIST_URL   = f"{_BASE}/historical/tageswerte_KL_{STATION}_19920517_20241231_hist.zip"
 RECENT_URL = f"{_BASE}/recent/tageswerte_KL_{STATION}_akt.zip"
+
+
+def _discover_hist_url(station: str) -> str:
+    """DWD reissues the historical ZIP annually with a rolled-forward end
+    date baked into the filename (e.g. ..._20241231_hist.zip becomes
+    ..._20251231_hist.zip). Discover the current name instead of hardcoding
+    it, since a stale filename 404s silently and truncates the record."""
+    index_url = f"{_BASE}/historical/"
+    with urllib.request.urlopen(index_url, timeout=30) as resp:
+        html = resp.read().decode("utf-8", errors="replace")
+    pattern = rf"tageswerte_KL_{station}_\d{{8}}_\d{{8}}_hist\.zip"
+    match = re.search(pattern, html)
+    if not match:
+        raise RuntimeError(f"Could not find historical zip for station {station} in {index_url}")
+    return f"{_BASE}/historical/{match.group(0)}"
 
 # DWD column → our column
 _MAP = {"TXK": "tmax", "TMK": "tmit", "TNK": "tmin", "RSK": "rain", "SDK": "sunshine"}
@@ -58,8 +73,15 @@ def fetch(cache_dir: Path) -> bool:
     cache_dir.mkdir(parents=True, exist_ok=True)
     out_path = cache_dir / "dwd_weather.csv"
 
+    try:
+        hist_url = _discover_hist_url(STATION)
+    except Exception as exc:
+        print(f"WARNING: historical URL discovery failed: {exc}", file=sys.stderr)
+        hist_url = None
+
     all_rows: list[dict] = []
-    for url, label in [(HIST_URL, "historical"), (RECENT_URL, "recent")]:
+    sources = ([(hist_url, "historical")] if hist_url else []) + [(RECENT_URL, "recent")]
+    for url, label in sources:
         print(f"  DWD {label}… ", end="", flush=True)
         try:
             with urllib.request.urlopen(url, timeout=30) as resp:
@@ -73,6 +95,13 @@ def fetch(cache_dir: Path) -> bool:
     if not all_rows:
         print("  DWD: no data fetched", file=sys.stderr)
         return False
+
+    # Sanity check: full history should be ~30 years (~11000+ rows). If we
+    # only got the recent file, fail loudly rather than silently truncating
+    # the record (this previously broke the weather chart for weeks).
+    if hist_url and len(all_rows) < 5000:
+        print(f"  DWD: WARNING — only {len(all_rows)} rows fetched, expected 10000+. "
+              f"Historical fetch may have failed silently.", file=sys.stderr)
 
     # Deduplicate — recent file overlaps hist; keep recent's values
     merged: dict[str, dict] = {}
