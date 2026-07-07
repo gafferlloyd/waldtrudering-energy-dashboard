@@ -98,7 +98,7 @@ def chart_electricity(daily: pd.DataFrame) -> go.Figure:
     fig.update_layout(
         title="Electricity Use",
         xaxis_title="Date",
-        yaxis=dict(title="kWh / day", range=[0, 30]),
+        yaxis=dict(title="kWh / day", range=[0, 25]),
         yaxis2=dict(title="MWh / year", overlaying="y", side="right",
                     range=[0, 10], showgrid=False),
     )
@@ -117,7 +117,7 @@ def chart_water(daily: pd.DataFrame) -> go.Figure:
     fig.update_layout(
         title="Water Use",
         xaxis_title="Date",
-        yaxis=dict(title="m³ / day", range=[0, 1.5]),
+        yaxis=dict(title="m³ / day", range=[0, 1]),
         yaxis2=dict(title="m³ / year", overlaying="y", side="right",
                     range=[0, 300], showgrid=False),
     )
@@ -163,7 +163,7 @@ def chart_gas_vs_temp(daily: pd.DataFrame, hot_water_kwh: float) -> go.Figure:
                       xaxis_title="Min Temperature (°C)",
                       yaxis_title="Gas Use (kWh/day)",
                       xaxis=dict(range=[-25, 25]),
-                      yaxis=dict(range=[0, 250]))
+                      yaxis=dict(range=[0, 200]))
     return fig
 
 
@@ -213,7 +213,7 @@ def chart_gas_day_of_year(daily: pd.DataFrame,
     fig.update_layout(
         title="Gas Use by Day-of-Year",
         xaxis=dict(range=[0, 364], tickvals=_MONTH_TICKVALS, ticktext=_MONTH_TICKTEXT),
-        yaxis=dict(title="Gas Use (kWh/day)", range=[0, 250]),
+        yaxis=dict(title="Gas Use (kWh/day)", range=[0, 200]),
     )
     return fig
 
@@ -298,7 +298,7 @@ def chart_efficiency_trend(daily: pd.DataFrame) -> go.Figure:
         title="Heating Efficiency Development (kWh gas per degree-day)",
         xaxis_title="Date",
         yaxis_title="kWh / °C·day",
-        yaxis=dict(range=[0, 20]),
+        yaxis=dict(range=[0, 10]),
     )
     return fig
 
@@ -319,7 +319,7 @@ def chart_annual_cost(daily: pd.DataFrame) -> go.Figure:
 
     fig.update_layout(title="Annual Energy Cost (rolling)",
                       xaxis_title="Date", yaxis_title="EUR thousands / year",
-                      yaxis=dict(range=[0, 6]))
+                      yaxis=dict(range=[0, 3]))
     return fig
 
 
