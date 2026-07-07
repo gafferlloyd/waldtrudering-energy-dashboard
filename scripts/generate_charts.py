@@ -404,6 +404,30 @@ def chart_weather(daily: pd.DataFrame, weather_dwd: pd.DataFrame | None = None) 
                                  line=dict(color=clr), showlegend=True), row=1, col=3)
         fig.add_hline(y=refs[rk], line_color=clr, **REF_STYLE, row=1, col=3)
 
+    # Sunshine sensor outage placeholder: if raw sunshine data has a sustained gap
+    # at the end, draw a flat dotted segment at the "same as last year" rolling value.
+    # (min_periods tolerates the gap so the rolling series doesn't go NaN — we must
+    # detect the outage from the raw data, not the smoothed series.)
+    sun_raw  = w["sunshine"].dropna()
+    sun_roll = (roll(w["sunshine"]) * movar).dropna()
+    if len(sun_raw) > 0 and len(sun_roll) > 0:
+        last_raw_date = sun_raw.index[-1]
+        data_end      = w.index[-1]
+        if data_end - last_raw_date > pd.Timedelta(days=14):
+            ly_date      = last_raw_date - pd.Timedelta(days=365)
+            ly_available = sun_roll[sun_roll.index <= ly_date]
+            if len(ly_available):
+                ly_val = float(ly_available.iloc[-1])
+                fig.add_trace(go.Scatter(
+                    x=[last_raw_date, data_end],
+                    y=[ly_val, ly_val],
+                    name="Sunshine (est. same as last yr)",
+                    mode="lines",
+                    line=dict(color="#CCB974", dash="dash", width=1.5),
+                    opacity=0.6,
+                    showlegend=True,
+                ), row=1, col=3)
+
     # Row 2 col 1 — warm/hot days
     for thr, name, clr, rk in [(20,">20°C","#64B5CD","d20"),(25,">25°C","#55A868","d25"),(30,">30°C","#C44E52","d30")]:
         s = (roll((w["tmax"] >= thr).astype(float)) * movar).dropna()
