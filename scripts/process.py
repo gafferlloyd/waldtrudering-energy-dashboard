@@ -43,10 +43,11 @@ def _load_meter_fresh(path: Path) -> pd.DataFrame:
     dates = pd.to_datetime(raw.iloc[:, 0], errors="coerce")
     raw = raw[dates.notna()].copy()
     df = pd.DataFrame({
-        "date":  pd.to_datetime(raw.iloc[:, 0], errors="coerce"),
-        "elec":  pd.to_numeric(raw.iloc[:, 2], errors="coerce"),
-        "gas":   pd.to_numeric(raw.iloc[:, 4], errors="coerce"),
-        "water": pd.to_numeric(raw.iloc[:, 5], errors="coerce"),
+        "date":        pd.to_datetime(raw.iloc[:, 0], errors="coerce"),
+        "elec":        pd.to_numeric(raw.iloc[:, 2], errors="coerce"),
+        "elec_export": pd.to_numeric(raw.iloc[:, 3], errors="coerce"),
+        "gas":         pd.to_numeric(raw.iloc[:, 4], errors="coerce"),
+        "water":       pd.to_numeric(raw.iloc[:, 5], errors="coerce"),
     })
     return df.dropna(subset=["date"])
 
@@ -64,6 +65,9 @@ def load_meter_data(data_dir: Path, cache_dir: Path | None = None) -> pd.DataFra
         .sort_values("date")
         .set_index("date")
     )
+    # Archive rows predate solar installation — fill missing export column with 0
+    if "elec_export" in combined.columns:
+        combined["elec_export"] = combined["elec_export"].fillna(0)
     return combined
 
 
@@ -162,20 +166,26 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None) -> dict:
     m = meter.reindex(date_range)
     for col in ["elec", "gas", "water"]:
         m[col] = m[col].interpolate(method="index")
+    # Export meter: NaN before solar installation = 0 (no solar existed pre-2026-07)
+    if "elec_export" in meter.columns:
+        m["elec_export"] = meter["elec_export"].reindex(date_range).fillna(0)
+    else:
+        m["elec_export"] = 0.0
 
     # Daily consumption via diff (first row becomes NaN, drop it)
     daily = pd.DataFrame(index=date_range[1:])
-    daily["use_gas_m3"]   = m["gas"].diff().iloc[1:]
-    daily["use_elec_kwh"] = m["elec"].diff().iloc[1:]
-    daily["use_water_m3"] = m["water"].diff().iloc[1:]
-    daily["use_gas_kwh"]  = daily["use_gas_m3"] * gas_cv
+    daily["use_gas_m3"]          = m["gas"].diff().iloc[1:]
+    daily["use_elec_kwh"]        = m["elec"].diff().iloc[1:]
+    daily["use_elec_export_kwh"] = m["elec_export"].diff().iloc[1:]
+    daily["use_water_m3"]        = m["water"].diff().iloc[1:]
+    daily["use_gas_kwh"]         = daily["use_gas_m3"] * gas_cv
 
     # Join weather (offset by 1 since diff loses first row)
     for col in ["tmax", "tmit", "tmin", "rain", "sunshine"]:
         daily[col] = w[col].iloc[1:].values
 
-    # Sanity-clip negative consumption
-    for col in ["use_gas_m3", "use_elec_kwh", "use_water_m3", "use_gas_kwh"]:
+    # Sanity-clip negative consumption / export
+    for col in ["use_gas_m3", "use_elec_kwh", "use_elec_export_kwh", "use_water_m3", "use_gas_kwh"]:
         daily.loc[daily[col] < 0, col] = np.nan
 
     # Degree days
@@ -192,13 +202,15 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None) -> dict:
 
     # Rolling averages
     for w_days in [7, 28, 365]:
-        daily[f"gas_ma{w_days}"]   = daily["use_gas_kwh"].rolling(w_days, min_periods=w_days//2).mean()
-        daily[f"elec_ma{w_days}"]  = daily["use_elec_kwh"].rolling(w_days, min_periods=w_days//2).mean()
-        daily[f"water_ma{w_days}"] = daily["use_water_m3"].rolling(w_days, min_periods=w_days//2).mean()
+        daily[f"gas_ma{w_days}"]         = daily["use_gas_kwh"].rolling(w_days, min_periods=w_days//2).mean()
+        daily[f"elec_ma{w_days}"]        = daily["use_elec_kwh"].rolling(w_days, min_periods=w_days//2).mean()
+        daily[f"elec_export_ma{w_days}"] = daily["use_elec_export_kwh"].rolling(w_days, min_periods=1).mean()
+        daily[f"water_ma{w_days}"]       = daily["use_water_m3"].rolling(w_days, min_periods=w_days//2).mean()
 
     # Annualised rolling sums (kWh/year)
-    daily["gas_annual_kwh"]  = daily["use_gas_kwh"].rolling(365, min_periods=180).sum()
-    daily["elec_annual_kwh"] = daily["use_elec_kwh"].rolling(365, min_periods=180).sum()
+    daily["gas_annual_kwh"]         = daily["use_gas_kwh"].rolling(365, min_periods=180).sum()
+    daily["elec_annual_kwh"]        = daily["use_elec_kwh"].rolling(365, min_periods=180).sum()
+    daily["elec_export_annual_kwh"] = daily["use_elec_export_kwh"].rolling(365, min_periods=1).sum()
 
 
     # Per-day energy prices (date-based)
@@ -225,7 +237,7 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None) -> dict:
         if start > daily.index[-1]:
             continue
         ydf = daily[start:end].copy()
-        if len(ydf) < 30:
+        if len(ydf) < 3:
             continue
         # Drop years that don't start within 30 days of Jul 1 — a late start
         # shifts the doy counter and makes the trace appear x-offset vs full years.

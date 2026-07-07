@@ -101,8 +101,9 @@
 </head>
 <body>
 
-{% macro trend_arrow(pct) %}{%- if pct is not none -%}
-{%- set cls   = 'trend-bad'  if pct > 0 else ('trend-good' if pct < 0 else 'trend-flat') -%}
+{% macro trend_arrow(pct, invert=false) %}{%- if pct is not none -%}
+{%- set good = (pct < 0) if not invert else (pct > 0) -%}
+{%- set cls  = 'trend-good' if good else ('trend-bad' if pct != 0 else 'trend-flat') -%}
 {%- set arrow = '↑' if pct > 0 else ('↓' if pct < 0 else '→') -%}
 <span class="stat-trend {{ cls }}">{{ arrow }} {{ pct | abs }}% vs last year</span>
 {%- endif -%}{% endmacro %}
@@ -151,6 +152,17 @@
     {{ trend_arrow(stats.water_annual_trend) }}
   </div>
   <div class="stat">
+    <span class="stat-label">Solar export — 7d avg</span>
+    <span class="stat-value">{{ stats.export_daily7_kwh }} <span class="stat-unit">kWh/day</span></span>
+    {{ trend_arrow(stats.export_annual_trend, invert=true) }}
+  </div>
+  <div class="stat">
+    <span class="stat-label">Solar export — annual</span>
+    <span class="stat-value">{{ stats.export_annual_kwh | int }}</span>
+    <span class="stat-unit">kWh / year</span>
+    {{ trend_arrow(stats.export_annual_trend, invert=true) }}
+  </div>
+  <div class="stat">
     <span class="stat-label">Annual Cost</span>
     <span class="stat-value">€{{ "{:,}".format(stats.annual_cost_eur) }}</span>
     <span class="stat-unit">gas + electricity</span>
@@ -181,7 +193,7 @@
 
 <footer>
   Meter readings entered manually into
-  <a href="https://docs.google.com/spreadsheets/d/187kPTtFK-VU-vDwUYkEDGgvmM_hgH1WUG0x7Yni9Z1o" target="_blank">
+  <a href="https://docs.google.com/spreadsheets/d/1TyTO6p7LE1mKPrm77rjBYjc1zEEQHID6cAjYZX17DAU" target="_blank">
     Google Sheets</a> ·
   Weather data from
   <a href="https://www.meteo.physik.uni-muenchen.de" target="_blank">LMU Munich</a> ·

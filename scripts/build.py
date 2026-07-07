@@ -133,9 +133,13 @@ def main():
         "elec_7d_trend":     trend_pct(sum7_at("use_elec_kwh"), sum7_at("use_elec_kwh", 365)),
         "water_7d_trend":    trend_pct(sum7_at("use_water_m3"), sum7_at("use_water_m3", 365)),
         "gas_annual_trend":  trend_pct(annual_at("gas_annual_kwh"), annual_at("gas_annual_kwh", 365)),
-        "elec_annual_trend": trend_pct(annual_at("elec_annual_kwh"), annual_at("elec_annual_kwh", 365)),
-        "water_annual_trend":water_annual_trend,
-        "cost_annual_trend": trend_pct(annual_at("cost_total_annual"), annual_at("cost_total_annual", 365)),
+        "elec_annual_trend":    trend_pct(annual_at("elec_annual_kwh"), annual_at("elec_annual_kwh", 365)),
+        "water_annual_trend":   water_annual_trend,
+        "cost_annual_trend":    trend_pct(annual_at("cost_total_annual"), annual_at("cost_total_annual", 365)),
+        # Solar export (new from 2026-07-07; trend will be None until a full year of data)
+        "export_daily7_kwh":    round(avg7("use_elec_export_kwh"), 1),
+        "export_annual_kwh":    round(annual("elec_export_annual_kwh"), 0),
+        "export_annual_trend":  trend_pct(annual_at("elec_export_annual_kwh"), annual_at("elec_export_annual_kwh", 365)),
     }
 
     # ── 5. Render HTML ────────────────────────────────────────────────────────
