@@ -35,22 +35,18 @@ def _load_meter_archive(path: Path) -> pd.DataFrame:
 
 
 def _load_meter_fresh(path: Path) -> pd.DataFrame:
-    """Parse Google Sheets CSV.
+    """Parse current Google Sheets CSV (from 2026-07-07, new electricity meter).
 
-    Supports two formats:
-      Old: date, excel_serial, elec, gas, water, …
-      New: date, (blank), elec, gas, water, …  (excel serial omitted)
-    Elec/gas/water are always in columns 2/3/4.
+    Columns: date, date_num, elec_import, elec_export, gas, water
     """
     raw = pd.read_csv(path, header=None)
-    # Skip non-data rows by requiring a parseable date in col 0
     dates = pd.to_datetime(raw.iloc[:, 0], errors="coerce")
     raw = raw[dates.notna()].copy()
     df = pd.DataFrame({
-        "date": pd.to_datetime(raw.iloc[:, 0], errors="coerce"),
-        "elec": pd.to_numeric(raw.iloc[:, 2], errors="coerce"),
-        "gas":  pd.to_numeric(raw.iloc[:, 3], errors="coerce"),
-        "water": pd.to_numeric(raw.iloc[:, 4], errors="coerce"),
+        "date":  pd.to_datetime(raw.iloc[:, 0], errors="coerce"),
+        "elec":  pd.to_numeric(raw.iloc[:, 2], errors="coerce"),
+        "gas":   pd.to_numeric(raw.iloc[:, 4], errors="coerce"),
+        "water": pd.to_numeric(raw.iloc[:, 5], errors="coerce"),
     })
     return df.dropna(subset=["date"])
 
@@ -61,9 +57,10 @@ def load_meter_data(data_dir: Path, cache_dir: Path | None = None) -> pd.DataFra
         fresh_path = cache_dir / "meterreadings.csv"
         if fresh_path.exists():
             frames.append(_load_meter_fresh(fresh_path))
+    # Archive is the authoritative source for any dates it covers; keep="first"
     combined = (
         pd.concat(frames, ignore_index=True)
-        .drop_duplicates("date")
+        .drop_duplicates("date", keep="first")
         .sort_values("date")
         .set_index("date")
     )

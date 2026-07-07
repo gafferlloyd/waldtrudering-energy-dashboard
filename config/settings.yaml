@@ -4,7 +4,10 @@ degree_day_offset_k: 3.0   # EU standard adjustment (applied when degree_days > 
 gas_calorific_kwh_per_m3: 11.266
 
 # Google Sheet CSV export URLs
-meter_sheet_url: "https://docs.google.com/spreadsheets/d/187kPTtFK-VU-vDwUYkEDGgvmM_hgH1WUG0x7Yni9Z1o/export?format=csv"
+# Current meter readings (from 2026-07-07, new electricity meter starting at 0)
+# Columns: date, date_num, elec_import, elec_export, gas, water
+# Historical data (up to 2026-07-06) is permanently archived in data/meter_archive.csv
+meter_sheet_url: "https://docs.google.com/spreadsheets/d/1TyTO6p7LE1mKPrm77rjBYjc1zEEQHID6cAjYZX17DAU/export?format=csv"
 weather_sheet_url: "https://docs.google.com/spreadsheets/d/1RR-2DrAqDeNngQxc2Xve4Hi91FKds_gGo_hoZHwItKg/export?format=csv"
 
 # Date-based electricity prices (EUR/kWh). Price applies from the given date onwards.
