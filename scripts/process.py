@@ -152,15 +152,18 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None) -> dict:
     if weather_dwd is None:
         raise RuntimeError("DWD weather data not found — run fetch_dwd_weather.py first")
 
-    # Date range: first date with all three meter readings → DWD end.
-    # Early archive rows have only 1-2 utilities; skip those.
+    # Date range: first date with all three meter readings → latest of DWD or meter.
+    # Meter data can arrive ahead of DWD (which lags ~1-2 days), so we extend
+    # to whichever is later so energy stats aren't artificially delayed.
     first_complete = meter.dropna(how="any").index.min()
-    date_range = pd.date_range(first_complete, weather_dwd.index.max(), freq="D")
+    data_end = max(weather_dwd.index.max(), meter.index.max())
+    date_range = pd.date_range(first_complete, data_end, freq="D")
 
-    # Reindex DWD weather; interpolate small gaps
+    # Reindex DWD weather; interpolate small interior gaps only (limit_area="inside"
+    # prevents forward-filling fake weather beyond the last real DWD observation).
     w = weather_dwd.reindex(date_range)
     for col in ["tmax", "tmit", "tmin", "rain", "sunshine"]:
-        w[col] = w[col].interpolate(method="index", limit=7)
+        w[col] = w[col].interpolate(method="index", limit=7, limit_area="inside")
 
     # Reindex meter readings and interpolate
     m = meter.reindex(date_range)
