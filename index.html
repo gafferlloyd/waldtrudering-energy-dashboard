@@ -40,6 +40,28 @@
     }
     header h1 { font-size: 1.4rem; font-weight: 600; color: var(--accent); }
     header .meta { font-size: 0.8rem; color: var(--subtext); }
+    .header-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-shrink: 0;
+    }
+
+    .lang-switcher { display: flex; gap: 0.2rem; align-items: center; }
+    .lang-btn {
+      background: none;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1.15rem;
+      line-height: 1;
+      padding: 0.1rem 0.25rem;
+      opacity: 0.4;
+      transition: opacity 0.15s;
+    }
+    .lang-btn:hover  { opacity: 0.85; }
+    .lang-btn.active { opacity: 1; border-color: var(--border); background: var(--overlay); }
 
     .stats-bar {
       background: var(--surface);
@@ -62,9 +84,7 @@
     .trend-bad  { color: var(--red); }
     .trend-flat { color: var(--subtext); }
 
-    main {
-      padding: 1.5rem 2rem;
-    }
+    main { padding: 1.5rem 2rem; }
 
     .chart-grid {
       display: grid;
@@ -83,9 +103,7 @@
       border-radius: 8px;
       overflow: hidden;
     }
-    /* Weather chart spans full width */
     .chart-card.full-width { grid-column: 1 / -1; }
-
     .chart-card .plotly-graph-div { width: 100% !important; }
 
     footer {
@@ -104,74 +122,81 @@
 
 
 <header>
-  <h1>81827 Waldtrudering Energy Dashboard</h1>
-  <span class="meta">Data through 11 Jul 2026</span>
-  <span class="meta" style="margin-left:auto;">Built 2026-07-12 12:30 UTC</span>
+  <h1 data-i18n="site_title">81827 Waldtrudering Energy Dashboard</h1>
+  <span class="meta" data-i18n-tpl="data_through" data-date="11 Jul 2026">Data through 11 Jul 2026</span>
+  <div class="header-right">
+    <span class="meta" data-i18n-tpl="built_at" data-time="2026-07-12 12:45 UTC">Built 2026-07-12 12:45 UTC</span>
+    <div class="lang-switcher">
+      <button class="lang-btn" data-lang="en" title="English">🇬🇧</button>
+      <button class="lang-btn" data-lang="de" title="Deutsch">🇩🇪</button>
+      <button class="lang-btn" data-lang="it" title="Italiano">🇮🇹</button>
+    </div>
+  </div>
 </header>
 
 <div class="stats-bar">
   <div class="stat">
-    <span class="stat-label">Gas — daily / 7d avg</span>
+    <span class="stat-label" data-i18n="gas_daily_label">Gas — daily / 7d avg</span>
     <span class="stat-value">0.0 <span class="stat-unit">kWh</span></span>
-    <span class="stat-unit">1.1 kWh avg</span>
-    <span class="stat-trend trend-good">↓ 89.5% vs last year</span>
+    <span class="stat-unit">1.1 <span data-i18n="kwh_avg">kWh avg</span></span>
+    <span class="stat-trend trend-good">↓ 89.5% <span data-i18n="vs_last_year">vs last year</span></span>
   </div>
   <div class="stat">
-    <span class="stat-label">Gas — annual</span>
+    <span class="stat-label" data-i18n="gas_annual_label">Gas — annual</span>
     <span class="stat-value">7.0</span>
-    <span class="stat-unit">MWh / year</span>
-    <span class="stat-trend trend-bad">↑ 25.5% vs last year</span>
+    <span class="stat-unit" data-i18n="mwh_year">MWh / year</span>
+    <span class="stat-trend trend-bad">↑ 25.5% <span data-i18n="vs_last_year">vs last year</span></span>
   </div>
   <div class="stat">
-    <span class="stat-label">Electricity — daily / 7d avg</span>
+    <span class="stat-label" data-i18n="elec_daily_label">Electricity — daily / 7d avg</span>
     <span class="stat-value">0.0 <span class="stat-unit">kWh</span></span>
-    <span class="stat-unit">0.2 kWh avg</span>
-    <span class="stat-trend trend-good">↓ 98.7% vs last year</span>
+    <span class="stat-unit">0.2 <span data-i18n="kwh_avg">kWh avg</span></span>
+    <span class="stat-trend trend-good">↓ 98.7% <span data-i18n="vs_last_year">vs last year</span></span>
   </div>
   <div class="stat">
-    <span class="stat-label">Electricity — annual</span>
+    <span class="stat-label" data-i18n="elec_annual_label">Electricity — annual</span>
     <span class="stat-value">5.4</span>
-    <span class="stat-unit">MWh / year</span>
-    <span class="stat-trend trend-bad">↑ 13.9% vs last year</span>
+    <span class="stat-unit" data-i18n="mwh_year">MWh / year</span>
+    <span class="stat-trend trend-bad">↑ 13.9% <span data-i18n="vs_last_year">vs last year</span></span>
   </div>
   <div class="stat">
-    <span class="stat-label">Water — daily / 7d avg</span>
+    <span class="stat-label" data-i18n="water_daily_label">Water — daily / 7d avg</span>
     <span class="stat-value">0.443 <span class="stat-unit">m³</span></span>
-    <span class="stat-unit">0.398 m³ avg</span>
-    <span class="stat-trend trend-bad">↑ 5.0% vs last year</span>
+    <span class="stat-unit">0.398 <span data-i18n="m3_avg">m³ avg</span></span>
+    <span class="stat-trend trend-bad">↑ 5.0% <span data-i18n="vs_last_year">vs last year</span></span>
   </div>
   <div class="stat">
-    <span class="stat-label">Water — annual</span>
+    <span class="stat-label" data-i18n="water_annual_label">Water — annual</span>
     <span class="stat-value">143</span>
-    <span class="stat-unit">m³ / year</span>
-    <span class="stat-trend trend-bad">↑ 9.6% vs last year</span>
+    <span class="stat-unit" data-i18n="m3_year">m³ / year</span>
+    <span class="stat-trend trend-bad">↑ 9.6% <span data-i18n="vs_last_year">vs last year</span></span>
   </div>
   <div class="stat">
-    <span class="stat-label">Solar export — 7d avg</span>
-    <span class="stat-value">20.9 <span class="stat-unit">kWh/day</span></span>
+    <span class="stat-label" data-i18n="solar_daily_label">Solar export — 7d avg</span>
+    <span class="stat-value">20.9 <span class="stat-unit" data-i18n="kwh_day">kWh/day</span></span>
     
   </div>
   <div class="stat">
-    <span class="stat-label">Solar export — annual</span>
+    <span class="stat-label" data-i18n="solar_annual_label">Solar export — annual</span>
     <span class="stat-value">146</span>
-    <span class="stat-unit">kWh / year</span>
+    <span class="stat-unit" data-i18n="kwh_year">kWh / year</span>
     
   </div>
   <div class="stat">
-    <span class="stat-label">Annual Cost</span>
+    <span class="stat-label" data-i18n="cost_label">Annual Cost</span>
     <span class="stat-value">€2,231</span>
-    <span class="stat-unit">gas + electricity</span>
-    <span class="stat-trend trend-bad">↑ 25.7% vs last year</span>
+    <span class="stat-unit" data-i18n="gas_elec">gas + electricity</span>
+    <span class="stat-trend trend-bad">↑ 25.7% <span data-i18n="vs_last_year">vs last year</span></span>
   </div>
   <div class="stat">
-    <span class="stat-label">Efficiency (3yr)</span>
+    <span class="stat-label" data-i18n="efficiency_label">Efficiency (3yr)</span>
     <span class="stat-value">33.5</span>
-    <span class="stat-unit">kWh / m² / year</span>
+    <span class="stat-unit" data-i18n="kwh_m2_year">kWh / m² / year</span>
   </div>
   <div class="stat">
-    <span class="stat-label">Hot Water Baseline</span>
+    <span class="stat-label" data-i18n="hot_water_label">Hot Water Baseline</span>
     <span class="stat-value">12.1</span>
-    <span class="stat-unit">kWh / day</span>
+    <span class="stat-unit" data-i18n="kwh_day2">kWh / day</span>
   </div>
 </div>
 
@@ -237,13 +262,12 @@
 </main>
 
 <footer>
-  Meter readings entered manually into
-  <a href="https://docs.google.com/spreadsheets/d/1TyTO6p7LE1mKPrm77rjBYjc1zEEQHID6cAjYZX17DAU" target="_blank">
-    Google Sheets</a> ·
-  Weather data from
-  <a href="https://www.meteo.physik.uni-muenchen.de" target="_blank">LMU Munich</a> ·
-  Built with Python + Plotly ·
-  <a href="https://github.com" target="_blank">Source</a>
+  <span data-i18n="footer_meter">Meter readings entered manually into</span>
+  <a href="https://docs.google.com/spreadsheets/d/1TyTO6p7LE1mKPrm77rjBYjc1zEEQHID6cAjYZX17DAU" target="_blank">Google Sheets</a> ·
+  <span data-i18n="footer_weather">Weather data from</span>
+  <a href="https://www.dwd.de" target="_blank">DWD</a> ·
+  <span data-i18n="footer_built">Built with Python + Plotly</span> ·
+  <a href="https://github.com/gafferlloyd/waldtrudering-energy-dashboard" target="_blank" data-i18n="footer_source">Source</a>
 </footer>
 
 <script>
@@ -305,6 +329,135 @@
     Plotly.newPlot("chart_weather", spec.data, spec.layout, config);
   })();
   
+
+  // ── i18n ──────────────────────────────────────────────────────────────────
+  const CHART_IDS = [
+    'chart_gas','chart_elec','chart_water','chart_gas_temp','chart_doy',
+    'chart_cum_gas','chart_cum_dd','chart_eff_trend','chart_cost',
+    'chart_gdd','chart_weather'
+  ];
+
+  const T = {
+    en: {
+      site_title: "81827 Waldtrudering Energy Dashboard",
+      data_through: "Data through", built_at: "Built",
+      gas_daily_label:   "Gas — daily / 7d avg",
+      gas_annual_label:  "Gas — annual",
+      elec_daily_label:  "Electricity — daily / 7d avg",
+      elec_annual_label: "Electricity — annual",
+      water_daily_label:  "Water — daily / 7d avg",
+      water_annual_label: "Water — annual",
+      solar_daily_label:  "Solar export — 7d avg",
+      solar_annual_label: "Solar export — annual",
+      cost_label: "Annual Cost", efficiency_label: "Efficiency (3yr)", hot_water_label: "Hot Water Baseline",
+      kwh_avg: "kWh avg", mwh_year: "MWh / year", m3_avg: "m³ avg", m3_year: "m³ / year",
+      kwh_day: "kWh/day", kwh_year: "kWh / year", kwh_day2: "kWh / day",
+      gas_elec: "gas + electricity", kwh_m2_year: "kWh / m² / year", vs_last_year: "vs last year",
+      footer_meter: "Meter readings entered manually into", footer_weather: "Weather data from",
+      footer_built: "Built with Python + Plotly", footer_source: "Source",
+      chart_gas:      "Annual Gas Use & Heating Efficiency (rolling)",
+      chart_elec:     "Electricity Use",
+      chart_water:    "Water Use",
+      chart_gas_temp: "Gas Use vs. Min Temperature",
+      chart_doy:      "Gas Use by Day-of-Year",
+      chart_cum_gas:  "Cumulative Gas Use by Heating Year (Jul → Jun)",
+      chart_cum_dd:   "Cumulative Heating Degree Days by Heating Year (Jul → Jun)",
+      chart_eff_trend:"Heating Efficiency Development (kWh gas per degree-day)",
+      chart_cost:     "Annual Energy Cost (rolling)",
+      chart_gdd:      "Cumulative Gas Energy vs. Cumulative Degree Days",
+      chart_weather:  "Weather Overview (rolling annual)  ·  dotted = 1992–2021 mean",
+    },
+    de: {
+      site_title: "81827 Waldtrudering Energie-Dashboard",
+      data_through: "Daten bis", built_at: "Erstellt",
+      gas_daily_label:   "Gas — täglich / 7T-Ø",
+      gas_annual_label:  "Gas — jährlich",
+      elec_daily_label:  "Strom — täglich / 7T-Ø",
+      elec_annual_label: "Strom — jährlich",
+      water_daily_label:  "Wasser — täglich / 7T-Ø",
+      water_annual_label: "Wasser — jährlich",
+      solar_daily_label:  "Solareinspeisung — 7T-Ø",
+      solar_annual_label: "Solareinspeisung — jährlich",
+      cost_label: "Jahreskosten", efficiency_label: "Effizienz (3 Jahre)", hot_water_label: "Warmwasserbedarf",
+      kwh_avg: "kWh Ø", mwh_year: "MWh / Jahr", m3_avg: "m³ Ø", m3_year: "m³ / Jahr",
+      kwh_day: "kWh/Tag", kwh_year: "kWh / Jahr", kwh_day2: "kWh / Tag",
+      gas_elec: "Gas + Strom", kwh_m2_year: "kWh / m² / Jahr", vs_last_year: "vs. Vorjahr",
+      footer_meter: "Zählerstände manuell eingetragen in", footer_weather: "Wetterdaten von",
+      footer_built: "Erstellt mit Python + Plotly", footer_source: "Quellcode",
+      chart_gas:      "Jährlicher Gasverbrauch & Heizeffizienz",
+      chart_elec:     "Stromverbrauch",
+      chart_water:    "Wasserverbrauch",
+      chart_gas_temp: "Gas vs. Mindesttemperatur",
+      chart_doy:      "Gasverbrauch nach Jahrestag",
+      chart_cum_gas:  "Kumulativer Gasverbrauch nach Heizsaison (Jul → Jun)",
+      chart_cum_dd:   "Kumulierte Heizgradtage nach Heizsaison (Jul → Jun)",
+      chart_eff_trend:"Entwicklung der Heizeffizienz (kWh Gas je Gradtag)",
+      chart_cost:     "Jährliche Energiekosten (rollierend)",
+      chart_gdd:      "Kumulativer Gasverbrauch vs. Heizgradtage",
+      chart_weather:  "Wetterübersicht (rollierend jährlich)  ·  gepunktet = Mittel 1992–2021",
+    },
+    it: {
+      site_title: "81827 Waldtrudering Dashboard Energetico",
+      data_through: "Dati fino al", built_at: "Creato",
+      gas_daily_label:   "Gas — giorn. / media 7g",
+      gas_annual_label:  "Gas — annuale",
+      elec_daily_label:  "Elettricità — giorn. / media 7g",
+      elec_annual_label: "Elettricità — annuale",
+      water_daily_label:  "Acqua — giorn. / media 7g",
+      water_annual_label: "Acqua — annuale",
+      solar_daily_label:  "Solare — media 7 giorni",
+      solar_annual_label: "Solare — annuale",
+      cost_label: "Costo annuale", efficiency_label: "Efficienza (3 anni)", hot_water_label: "Base acqua calda",
+      kwh_avg: "kWh media", mwh_year: "MWh / anno", m3_avg: "m³ media", m3_year: "m³ / anno",
+      kwh_day: "kWh/giorno", kwh_year: "kWh / anno", kwh_day2: "kWh / giorno",
+      gas_elec: "gas + elettricità", kwh_m2_year: "kWh / m² / anno", vs_last_year: "vs. anno scorso",
+      footer_meter: "Letture contatore inserite in", footer_weather: "Dati meteo da",
+      footer_built: "Sviluppato con Python + Plotly", footer_source: "Sorgente",
+      chart_gas:      "Consumo Gas Annuale & Efficienza Riscaldamento",
+      chart_elec:     "Consumo Elettricità",
+      chart_water:    "Consumo Acqua",
+      chart_gas_temp: "Gas vs. Temperatura Minima",
+      chart_doy:      "Consumo Gas per Giorno dell'Anno",
+      chart_cum_gas:  "Gas Cumulativo per Anno di Riscaldamento (Lug → Giu)",
+      chart_cum_dd:   "Gradi-Giorno Cumulativi per Anno di Riscaldamento (Lug → Giu)",
+      chart_eff_trend:"Sviluppo Efficienza Riscaldamento (kWh gas per grado-giorno)",
+      chart_cost:     "Costo Energetico Annuale (scorrevole)",
+      chart_gdd:      "Gas Cumulativo vs. Gradi-Giorno",
+      chart_weather:  "Panoramica Meteo (annuale scorrevole)  ·  punteggiato = media 1992–2021",
+    }
+  };
+
+  function applyLang(lang) {
+    const t = T[lang] || T.en;
+
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      if (t[el.dataset.i18n]) el.textContent = t[el.dataset.i18n];
+    });
+
+    document.querySelectorAll('[data-i18n-tpl]').forEach(el => {
+      const key = el.dataset.i18nTpl;
+      const suffix = el.dataset.date || el.dataset.time || '';
+      if (t[key]) el.textContent = t[key] + (suffix ? ' ' + suffix : '');
+    });
+
+    CHART_IDS.forEach(id => {
+      if (document.getElementById(id) && t[id]) {
+        try { Plotly.relayout(id, {'title.text': t[id]}); } catch(e) {}
+      }
+    });
+
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.lang === lang);
+    });
+    document.documentElement.lang = lang;
+    localStorage.setItem('lang', lang);
+  }
+
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.addEventListener('click', () => applyLang(btn.dataset.lang));
+  });
+
+  applyLang(localStorage.getItem('lang') || 'en');
 </script>
 
 </body>
