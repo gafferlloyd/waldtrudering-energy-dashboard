@@ -74,17 +74,28 @@ def main():
         s = daily[col].dropna()
         return float(s.iloc[-1]) if len(s) else 0.0
 
-    # 7-day average; zeros are real consumption, NaN is missing data
+    # 7-day average; zeros are real consumption, NaN is missing data.
+    # If a NaN appears within the window (e.g. meter changeover), only
+    # average from the most recent contiguous block after the last NaN.
     def avg7(col):
         s = daily[col]
-        return float(s.rolling(7, min_periods=1).mean().dropna().iloc[-1]) if len(s.dropna()) else 0.0
+        if len(s.dropna()) == 0:
+            return 0.0
+        window = s.iloc[-7:]
+        nans = window[window.isna()].index
+        block = window[window.index > nans[-1]] if len(nans) else window
+        valid = block.dropna()
+        return float(valid.mean()) if len(valid) else 0.0
 
-    # Sum of 7 days ending `offset_days` before the latest date
+    # Sum of 7 days ending `offset_days` before the latest date.
+    # Resets at NaN boundaries so meter changeovers don't mix eras.
     def sum7_at(col, offset_days=0):
         s = daily[col]
         end_date = s.index[-1] - timedelta(days=offset_days)
         window = s.loc[:end_date].iloc[-7:]
-        valid = window.dropna()
+        nans = window[window.isna()].index
+        block = window[window.index > nans[-1]] if len(nans) else window
+        valid = block.dropna()
         return float(valid.sum()) if len(valid) >= 4 else None
 
     # Value of a rolling-annual column `offset_days` before the latest date
