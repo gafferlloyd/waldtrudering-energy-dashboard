@@ -65,23 +65,23 @@ def main():
     # ── 4. Summary stats ──────────────────────────────────────────────────────
     cfg = data["config"]
 
-    # Last non-zero day for each utility
+    # Latest daily value (NaN days skipped; zero is valid — e.g. no gas in summer)
     def last_nonzero(col):
-        s = daily[col].replace(0, float("nan")).dropna()
+        s = daily[col].dropna()
         return float(s.iloc[-1]) if len(s) else 0.0
 
     def annual(col):
         s = daily[col].dropna()
         return float(s.iloc[-1]) if len(s) else 0.0
 
-    # 7-day average (exclude trailing zeros from missing readings)
+    # 7-day average; zeros are real consumption, NaN is missing data
     def avg7(col):
-        s = daily[col].replace(0, float("nan"))
+        s = daily[col]
         return float(s.rolling(7, min_periods=1).mean().dropna().iloc[-1]) if len(s.dropna()) else 0.0
 
-    # Sum of 7 days ending `offset_days` before the latest date (skips zeros)
+    # Sum of 7 days ending `offset_days` before the latest date
     def sum7_at(col, offset_days=0):
-        s = daily[col].replace(0, float("nan"))
+        s = daily[col]
         end_date = s.index[-1] - timedelta(days=offset_days)
         window = s.loc[:end_date].iloc[-7:]
         valid = window.dropna()
