@@ -1,4 +1,5 @@
 floor_area_m2: 170
+solar_thermal_date: "2026-07-07"   # from this date, solar thermal covers summer hot water
 base_temperature_c: 15
 degree_day_offset_k: 3.0   # EU standard adjustment (applied when degree_days > 0)
 gas_calorific_kwh_per_m3: 11.266

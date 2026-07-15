@@ -195,9 +195,13 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None) -> dict:
     dd = np.maximum(0.0, base_temp - daily["tmit"])
     daily["degree_days"] = np.where(dd > 0, dd + dd_offset, 0.0)
 
-    # Hot-water baseline: modal bin of last-12-months gas consumption,
-    # so the estimate responds to changes like solar thermal coming online.
-    gas_valid = daily["use_gas_kwh"].iloc[-365:].dropna()
+    # Hot-water baseline: modal bin of pre-solar-thermal gas data.
+    # Using only the period before solar thermal went live gives the boiler's
+    # true hot-water duty (~12 kWh/day), which is still needed on winter days
+    # when solar thermal cannot cover demand.
+    solar_thermal_date = pd.Timestamp(cfg.get("solar_thermal_date", "2099-01-01"))
+    gas_pre_solar = daily.loc[daily.index < solar_thermal_date, "use_gas_kwh"].dropna()
+    gas_valid = gas_pre_solar if len(gas_pre_solar) > 10 else daily["use_gas_kwh"].dropna()
     if len(gas_valid) > 10:
         counts, edges = np.histogram(gas_valid, bins=100)
         hot_water_kwh = float(edges[np.argmax(counts)] + (edges[1] - edges[0]) / 2)
