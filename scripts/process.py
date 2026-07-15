@@ -195,8 +195,9 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None) -> dict:
     dd = np.maximum(0.0, base_temp - daily["tmit"])
     daily["degree_days"] = np.where(dd > 0, dd + dd_offset, 0.0)
 
-    # Hot-water baseline: modal bin of daily gas consumption
-    gas_valid = daily["use_gas_kwh"].dropna()
+    # Hot-water baseline: modal bin of last-12-months gas consumption,
+    # so the estimate responds to changes like solar thermal coming online.
+    gas_valid = daily["use_gas_kwh"].iloc[-365:].dropna()
     if len(gas_valid) > 10:
         counts, edges = np.histogram(gas_valid, bins=100)
         hot_water_kwh = float(edges[np.argmax(counts)] + (edges[1] - edges[0]) / 2)
