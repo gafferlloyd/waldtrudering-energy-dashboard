@@ -124,7 +124,9 @@ def chart_water(daily: pd.DataFrame) -> go.Figure:
     return fig
 
 
-def chart_gas_vs_temp(daily: pd.DataFrame, hot_water_kwh: float) -> go.Figure:
+def chart_gas_vs_temp(daily: pd.DataFrame, hot_water_kwh: float,
+                       heating_balance_temp_c: float | None = None,
+                       heating_slope_kwh_per_c: float | None = None) -> go.Figure:
     fig = go.Figure()
     cutoff = daily.index[-1] - pd.Timedelta(days=365)
     old    = daily[daily.index <= cutoff]
@@ -139,20 +141,18 @@ def chart_gas_vs_temp(daily: pd.DataFrame, hot_water_kwh: float) -> go.Figure:
         mode="markers", name="Last 12 months",
         marker=dict(color=_PALETTE[3], size=5, opacity=0.8)))
 
-    # Hockey-stick fit on recent data: linear below breakpoint, flat at hot_water above
-    fit = recent[["tmin", "use_gas_kwh"]].dropna()
-    fit = fit[(fit["use_gas_kwh"] > 0) & (fit["tmin"] < 20)]
-    heating = fit[fit["use_gas_kwh"] > hot_water_kwh * 1.15]
-    if len(heating) >= 8:
-        coeffs = np.polyfit(heating["tmin"], heating["use_gas_kwh"], 1)
-        slope, intercept = coeffs
-        if slope < 0:
-            t_break = (hot_water_kwh - intercept) / slope   # where line meets baseline
-            xs = np.linspace(-25, min(25, t_break + 8), 300)
-            ys = np.maximum(hot_water_kwh, np.polyval(coeffs, xs))
-            fig.add_trace(go.Scatter(
-                x=xs, y=ys, name="Fit (last 12 months)",
-                line=dict(color=_PALETTE[0], width=2, dash="dash")))
+    # Hinge fit line: jointly fit on all pre-solar-thermal history in process.py
+    # (segmented regression -- baseline flat above heating_balance_temp_c, linear
+    # below), not re-fit here. This replaces an earlier approach that re-fit a
+    # separate line on only the last 12 months of points already flagged
+    # "heating" by the very baseline it was meant to help estimate — circular,
+    # and starved of data next to the full-history hinge fit.
+    if heating_balance_temp_c is not None and heating_slope_kwh_per_c is not None:
+        xs = np.linspace(-25, min(25, heating_balance_temp_c + 8), 300)
+        ys = np.maximum(hot_water_kwh, hot_water_kwh + heating_slope_kwh_per_c * (heating_balance_temp_c - xs))
+        fig.add_trace(go.Scatter(
+            x=xs, y=ys, name="Fit (full history, hinge)",
+            line=dict(color=_PALETTE[0], width=2, dash="dash")))
 
     # Hot water baseline
     fig.add_hline(y=hot_water_kwh, line_dash="dot", line_color=_PALETTE[3],
@@ -495,6 +495,8 @@ def _add_season_vlines(fig: go.Figure):
 def build_all(data: dict) -> list[dict]:
     daily       = data["daily"]
     hot_water   = data["hot_water_kwh"]
+    heating_balance_temp_c  = data.get("heating_balance_temp_c")
+    heating_slope_kwh_per_c = data.get("heating_slope_kwh_per_c")
     year_groups = data["year_groups"]
     median_doy  = data["median_gas_doy"]
     recent_doy  = data["recent_gas_doy"]
@@ -503,7 +505,7 @@ def build_all(data: dict) -> list[dict]:
         ("Annual Gas Use",          "chart_gas",      chart_annual_gas(daily, hot_water)),
         ("Electricity Use",         "chart_elec",     chart_electricity(daily)),
         ("Water Use",               "chart_water",    chart_water(daily)),
-        ("Gas vs Temperature",      "chart_gas_temp", chart_gas_vs_temp(daily, hot_water)),
+        ("Gas vs Temperature",      "chart_gas_temp", chart_gas_vs_temp(daily, hot_water, heating_balance_temp_c, heating_slope_kwh_per_c)),
         ("Gas by Day-of-Year",      "chart_doy",      chart_gas_day_of_year(daily, median_doy, recent_doy)),
         ("Cumulative Gas by Year",  "chart_cum_gas",  chart_cumulative_gas_by_year(daily, year_groups)),
         ("Cumulative Degree Days",  "chart_cum_dd",   chart_cumulative_degree_days(daily, year_groups)),

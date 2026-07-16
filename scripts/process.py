@@ -4,6 +4,7 @@ Data processing pipeline.
 Loads archived + fresh data, merges onto a daily date range, interpolates
 missing meter readings, and computes all derived quantities used in charts.
 """
+import sqlite3
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -130,9 +131,39 @@ def load_weather_data(data_dir: Path, cache_dir: Path | None = None) -> pd.DataF
     return combined
 
 
+# ── GoodWe daily rollup (cross-project, read-only) ─────────────────────────────
+# Supplementary AC-Thor/PV/battery data for a future gas DHW-vs-heating split.
+# See /home/gareth/goodwe_solar/daily_rollup.py, which builds this table nightly.
+
+GOODWE_ROLLUP_COLS = [
+    "acthor_energy_kwh", "pv_energy_total_kwh", "house_energy_kwh",
+    "battery_charge_total_kwh", "battery_discharge_total_kwh",
+    "grid_import_total_kwh", "grid_export_total_kwh", "rollup_complete",
+]
+
+
+def load_goodwe_rollup(db_path: Path) -> pd.DataFrame:
+    """Read goodwe_solar's daily_rollup table. Supplementary only — degrades
+    gracefully (empty frame) if the source DB/table is unavailable, unlike DWD
+    weather which is mandatory for the pipeline."""
+    if not db_path.exists():
+        return pd.DataFrame(columns=GOODWE_ROLLUP_COLS)
+    try:
+        conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True, timeout=5)
+        df = pd.read_sql_query(
+            f"SELECT date, {', '.join(GOODWE_ROLLUP_COLS)} FROM daily_rollup",
+            conn, parse_dates=["date"],
+        )
+        conn.close()
+        return df.set_index("date")
+    except sqlite3.Error:
+        return pd.DataFrame(columns=GOODWE_ROLLUP_COLS)
+
+
 # ── Main pipeline ─────────────────────────────────────────────────────────────
 
-def run(data_dir: Path | None = None, cache_dir: Path | None = None) -> dict:
+def run(data_dir: Path | None = None, cache_dir: Path | None = None,
+        goodwe_db_path: Path | None = None) -> dict:
     if data_dir is None:
         data_dir = ROOT / "data"
     if cache_dir is None:
@@ -145,6 +176,9 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None) -> dict:
     gas_prices  = cfg["gas_prices"]
     elec_prices = cfg["elec_prices"]
     floor_area = cfg["floor_area_m2"]
+
+    if goodwe_db_path is None:
+        goodwe_db_path = Path(cfg.get("goodwe_db_path", "/home/gareth/goodwe_solar/data.db"))
 
     meter = load_meter_data(data_dir, cache_dir)
     weather_dwd = load_dwd_weather(cache_dir)
@@ -187,6 +221,11 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None) -> dict:
     for col in ["tmax", "tmit", "tmin", "rain", "sunshine"]:
         daily[col] = w[col].iloc[1:].values
 
+    # Join goodwe_solar's daily rollup (AC-Thor/PV/battery) — left join on date;
+    # NaN before 2026-06-22 PV install is correct (nothing existed yet).
+    goodwe = load_goodwe_rollup(goodwe_db_path)
+    daily = daily.join(goodwe)
+
     # Sanity-clip negative consumption / export
     for col in ["use_gas_m3", "use_elec_kwh", "use_elec_export_kwh", "use_water_m3", "use_gas_kwh"]:
         daily.loc[daily[col] < 0, col] = np.nan
@@ -195,18 +234,51 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None) -> dict:
     dd = np.maximum(0.0, base_temp - daily["tmit"])
     daily["degree_days"] = np.where(dd > 0, dd + dd_offset, 0.0)
 
-    # Hot-water baseline: modal bin of pre-solar-thermal gas data.
-    # Using only the period before solar thermal went live gives the boiler's
-    # true hot-water duty (~12 kWh/day), which is still needed on winter days
-    # when solar thermal cannot cover demand.
+    # Hot-water baseline: segmented (hinge) regression of gas vs tmin.
+    # gas(tmin) = baseline for tmin >= T*, baseline + slope*(T* - tmin) below T*.
+    # For fixed T*, this is linear in (baseline, slope) -- grid-search T*, inner
+    # linear solve, keep the T* that minimizes squared error. This replaces an
+    # earlier histogram-mode heuristic (just the modal gas value pre-solar): that
+    # approach ignored temperature shape entirely and (verified 2026-07-16) put
+    # the baseline ~15% too high vs this fit, which cross-validates cleanly
+    # against the raw mean gas use on the actual warmest days.
+    #
+    # A literal CP-style hyperbolic fit (gas = baseline + a/(tmin-c), directly
+    # mirroring cycling's P=W'/t+CP) was tried first and rejected: it isn't
+    # identifiable from this data (this dataset's tmin never approaches where a
+    # true hyperbola would visibly flatten, unlike CP data spanning efforts near
+    # the sustainable duration) and converges to a physically impossible negative
+    # baseline. The hinge model is the right shape -- heating genuinely doesn't
+    # fire above some threshold, rather than power tapering smoothly to infinity.
+    #
+    # Restricted to pre-solar-thermal-date data: post-solar summer days are
+    # increasingly solar-covered (near-zero gas even though the boiler still
+    # *would* draw ~baseline for hot water), which would bias the fit low as
+    # more solar-covered days accumulate if included.
     solar_thermal_date = pd.Timestamp(cfg.get("solar_thermal_date", "2099-01-01"))
-    gas_pre_solar = daily.loc[daily.index < solar_thermal_date, "use_gas_kwh"].dropna()
-    gas_valid = gas_pre_solar if len(gas_pre_solar) > 10 else daily["use_gas_kwh"].dropna()
-    if len(gas_valid) > 10:
-        counts, edges = np.histogram(gas_valid, bins=100)
-        hot_water_kwh = float(edges[np.argmax(counts)] + (edges[1] - edges[0]) / 2)
+    fit_mask = daily.index < solar_thermal_date
+    gas_fit = daily.loc[fit_mask, "use_gas_kwh"] if fit_mask.sum() > 10 else daily["use_gas_kwh"]
+    tmin_fit = daily.loc[gas_fit.index, "tmin"]
+    valid = gas_fit.notna() & tmin_fit.notna()
+    gas_fit, tmin_fit = gas_fit[valid].values, tmin_fit[valid].values
+
+    if len(gas_fit) > 10:
+        n = len(gas_fit)
+        t_grid = np.linspace(-5, 18, 461)
+        best = None
+        for t_star in t_grid:
+            heat = np.maximum(0.0, t_star - tmin_fit)
+            A = np.column_stack([np.ones(n), heat])
+            coef, *_ = np.linalg.lstsq(A, gas_fit, rcond=None)
+            ss_res = float(np.sum((gas_fit - A @ coef) ** 2))
+            if best is None or ss_res < best[0]:
+                best = (ss_res, t_star, coef[0], coef[1])
+        _, heating_balance_temp_c, hot_water_kwh, heating_slope_kwh_per_c = best
+        hot_water_kwh = max(0.0, float(hot_water_kwh))
     else:
         hot_water_kwh = 0.0
+        heating_balance_temp_c = None
+        heating_slope_kwh_per_c = None
 
     # Rolling averages
     for w_days in [7, 28, 365]:
@@ -267,6 +339,8 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None) -> dict:
     return {
         "daily":            daily,
         "hot_water_kwh":    hot_water_kwh,
+        "heating_balance_temp_c":    heating_balance_temp_c,
+        "heating_slope_kwh_per_c":   heating_slope_kwh_per_c,
         "year_groups":      year_groups,
         "median_gas_doy":   median_gas_doy,
         "recent_gas_doy":   recent_gas_doy,

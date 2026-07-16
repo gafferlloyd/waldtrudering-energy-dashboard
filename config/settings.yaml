@@ -3,6 +3,8 @@ solar_thermal_date: "2026-07-07"   # from this date, solar thermal covers summer
 base_temperature_c: 15
 degree_day_offset_k: 3.0   # EU standard adjustment (applied when degree_days > 0)
 gas_calorific_kwh_per_m3: 11.266
+goodwe_db_path: "/home/gareth/goodwe_solar/data.db"   # cross-project read-only source for
+    # daily_rollup (AC-Thor/PV/battery) — see goodwe_solar/daily_rollup.py
 
 # Google Sheet CSV export URLs
 # Current meter readings (from 2026-07-07, new electricity meter starting at 0)
