@@ -236,12 +236,10 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None,
 
     # Hot-water baseline: segmented (hinge) regression of gas vs tmin.
     # gas(tmin) = baseline for tmin >= T*, baseline + slope*(T* - tmin) below T*.
-    # For fixed T*, this is linear in (baseline, slope) -- grid-search T*, inner
-    # linear solve, keep the T* that minimizes squared error. This replaces an
-    # earlier histogram-mode heuristic (just the modal gas value pre-solar): that
-    # approach ignored temperature shape entirely and (verified 2026-07-16) put
-    # the baseline ~15% too high vs this fit, which cross-validates cleanly
-    # against the raw mean gas use on the actual warmest days.
+    # This replaces an earlier histogram-mode heuristic (just the modal gas value
+    # pre-solar): that approach ignored temperature shape entirely and (verified
+    # 2026-07-16) put the baseline ~15% too high vs this fit, which cross-validates
+    # cleanly against the raw mean gas use on the actual warmest days.
     #
     # A literal CP-style hyperbolic fit (gas = baseline + a/(tmin-c), directly
     # mirroring cycling's P=W'/t+CP) was tried first and rejected: it isn't
@@ -251,34 +249,65 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None,
     # baseline. The hinge model is the right shape -- heating genuinely doesn't
     # fire above some threshold, rather than power tapering smoothly to infinity.
     #
-    # Restricted to pre-solar-thermal-date data: post-solar summer days are
-    # increasingly solar-covered (near-zero gas even though the boiler still
-    # *would* draw ~baseline for hot water), which would bias the fit low as
-    # more solar-covered days accumulate if included.
+    # Two-stage fit, deliberately not a single fit on one window:
+    #  1. T* (balance-point temp) is a structural property of the building's
+    #     heating response -- established once from the full pre-solar-thermal
+    #     history (~10 years, wide temperature range), where it's well identified.
+    #     Refitting it on only 12 months would be shaky (a single year may not
+    #     even span the full temperature range).
+    #  2. slope and baseline are BOTH refit together on just the trailing 365
+    #     days, holding only T* fixed. Tried holding slope fixed too (structural
+    #     value from the 10yr fit) and refitting baseline alone -- rejected
+    #     2026-07-16: gives a nonsensical baseline (1.6 kWh/day) because the
+    #     residuals-by-temperature-band come out strongly non-flat (-12.8 at
+    #     cold, +9.4 at warm) when the historical slope (3.21) is forced onto
+    #     this specific year, which apparently had a genuinely shallower cold-
+    #     weather gas response (~1.9-2.0) -- likely the "deliberate gas-saving
+    #     electrification" (infrared heaters etc.) already noted elsewhere in
+    #     this project's notes. Slope isn't as stable a structural constant as
+    #     it looked; only T* survives the cross-check as safe to hold fixed.
+    #     baseline is the number we actually want to watch move over time: as
+    #     solar increasingly covers hot water, more recent warm/mild days show
+    #     near-zero gas, and this legitimately falls to reflect "how much gas
+    #     is hot water actually still costing us now" -- not pinned to a fixed
+    #     historical constant.
     solar_thermal_date = pd.Timestamp(cfg.get("solar_thermal_date", "2099-01-01"))
-    fit_mask = daily.index < solar_thermal_date
-    gas_fit = daily.loc[fit_mask, "use_gas_kwh"] if fit_mask.sum() > 10 else daily["use_gas_kwh"]
-    tmin_fit = daily.loc[gas_fit.index, "tmin"]
-    valid = gas_fit.notna() & tmin_fit.notna()
-    gas_fit, tmin_fit = gas_fit[valid].values, tmin_fit[valid].values
+    struct_mask = daily.index < solar_thermal_date
+    gas_struct = daily.loc[struct_mask, "use_gas_kwh"] if struct_mask.sum() > 10 else daily["use_gas_kwh"]
+    tmin_struct = daily.loc[gas_struct.index, "tmin"]
+    valid = gas_struct.notna() & tmin_struct.notna()
+    gas_struct, tmin_struct = gas_struct[valid].values, tmin_struct[valid].values
 
-    if len(gas_fit) > 10:
-        n = len(gas_fit)
+    heating_balance_temp_c = None
+    heating_slope_kwh_per_c = None
+    hot_water_kwh = 0.0
+
+    if len(gas_struct) > 10:
+        n = len(gas_struct)
         t_grid = np.linspace(-5, 18, 461)
         best = None
         for t_star in t_grid:
-            heat = np.maximum(0.0, t_star - tmin_fit)
+            heat = np.maximum(0.0, t_star - tmin_struct)
             A = np.column_stack([np.ones(n), heat])
-            coef, *_ = np.linalg.lstsq(A, gas_fit, rcond=None)
-            ss_res = float(np.sum((gas_fit - A @ coef) ** 2))
+            coef, *_ = np.linalg.lstsq(A, gas_struct, rcond=None)
+            ss_res = float(np.sum((gas_struct - A @ coef) ** 2))
             if best is None or ss_res < best[0]:
-                best = (ss_res, t_star, coef[0], coef[1])
-        _, heating_balance_temp_c, hot_water_kwh, heating_slope_kwh_per_c = best
-        hot_water_kwh = max(0.0, float(hot_water_kwh))
-    else:
-        hot_water_kwh = 0.0
-        heating_balance_temp_c = None
-        heating_slope_kwh_per_c = None
+                best = (ss_res, t_star)
+        _, heating_balance_temp_c = best
+
+        # Stage 2: refit slope+baseline together on the trailing 365 days, T* fixed.
+        recent_cutoff = daily.index.max() - pd.Timedelta(days=365)
+        gas_recent = daily.loc[daily.index > recent_cutoff, "use_gas_kwh"]
+        tmin_recent = daily.loc[gas_recent.index, "tmin"]
+        rvalid = gas_recent.notna() & tmin_recent.notna()
+        gas_recent, tmin_recent = gas_recent[rvalid].values, tmin_recent[rvalid].values
+        src_gas, src_tmin = (gas_recent, tmin_recent) if len(gas_recent) > 20 else (gas_struct, tmin_struct)
+
+        heat = np.maximum(0.0, heating_balance_temp_c - src_tmin)
+        A = np.column_stack([np.ones(len(src_gas)), heat])
+        coef, *_ = np.linalg.lstsq(A, src_gas, rcond=None)
+        hot_water_kwh = max(0.0, float(coef[0]))
+        heating_slope_kwh_per_c = float(coef[1])
 
     # Rolling averages
     for w_days in [7, 28, 365]:

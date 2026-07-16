@@ -54,7 +54,7 @@ def main():
     data = process.run(data_dir=ROOT / "data", cache_dir=cache_dir)
     daily = data["daily"]
     print(f"  {len(daily):,} daily rows from {daily.index[0].date()} to {daily.index[-1].date()}")
-    print(f"  Hot-water baseline: {data['hot_water_kwh']:.1f} kWh/day")
+    print(f"  Hot-water baseline: {data['hot_water_kwh']:10.2f} kWh/day")
 
     # ── 3. Charts ─────────────────────────────────────────────────────────────
     print("Step 3: Generating charts…")
