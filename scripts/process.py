@@ -249,28 +249,34 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None,
     # baseline. The hinge model is the right shape -- heating genuinely doesn't
     # fire above some threshold, rather than power tapering smoothly to infinity.
     #
-    # Two-stage fit, deliberately not a single fit on one window:
+    # Two-stage, deliberately not a single fit on one window:
     #  1. T* (balance-point temp) is a structural property of the building's
     #     heating response -- established once from the full pre-solar-thermal
     #     history (~10 years, wide temperature range), where it's well identified.
     #     Refitting it on only 12 months would be shaky (a single year may not
     #     even span the full temperature range).
-    #  2. slope and baseline are BOTH refit together on just the trailing 365
-    #     days, holding only T* fixed. Tried holding slope fixed too (structural
-    #     value from the 10yr fit) and refitting baseline alone -- rejected
-    #     2026-07-16: gives a nonsensical baseline (1.6 kWh/day) because the
-    #     residuals-by-temperature-band come out strongly non-flat (-12.8 at
-    #     cold, +9.4 at warm) when the historical slope (3.21) is forced onto
-    #     this specific year, which apparently had a genuinely shallower cold-
-    #     weather gas response (~1.9-2.0) -- likely the "deliberate gas-saving
-    #     electrification" (infrared heaters etc.) already noted elsewhere in
-    #     this project's notes. Slope isn't as stable a structural constant as
-    #     it looked; only T* survives the cross-check as safe to hold fixed.
-    #     baseline is the number we actually want to watch move over time: as
-    #     solar increasingly covers hot water, more recent warm/mild days show
-    #     near-zero gas, and this legitimately falls to reflect "how much gas
-    #     is hot water actually still costing us now" -- not pinned to a fixed
-    #     historical constant.
+    #  2. baseline is a direct mean of trailing-12-month gas use on days with
+    #     tmin > 10C (comfortably above T*, so no heating contribution at all) --
+    #     not a regression. Simpler and more robust than fitting slope+baseline
+    #     together (tried 2026-07-16, gave 8.99 -- close, but adds model risk for
+    #     no real benefit: see slope-instability note below). This baseline is
+    #     the number we actually want to watch move over time: as solar
+    #     increasingly covers hot water, more recent warm/mild days show near-
+    #     zero gas, and this legitimately falls to reflect "how much gas is hot
+    #     water actually still costing us now" -- not pinned to a fixed constant.
+    #  3. slope (for the chart's descending line only, not otherwise used) is a
+    #     single-parameter regression on the same trailing window, forced
+    #     through (T*, baseline) so the chart's line always meets the flat
+    #     segment cleanly -- not a free 2-parameter fit.
+    #
+    # Rejected 2026-07-16: holding BOTH T* and slope fixed at their full-history
+    # structural values, refitting only the intercept on the trailing 12 months
+    # -- gave a nonsensical 1.6 kWh/day. Diagnosed via residuals-by-temperature-
+    # band, strongly non-flat (-12.8 at cold, +9.4 at warm): this past year's
+    # actual cold-weather gas response is genuinely shallower (~1.9 vs the
+    # 10yr-average 3.21 kWh/day/C) -- likely the "deliberate gas-saving
+    # electrification" (infrared heaters etc.) already noted elsewhere in this
+    # project's notes. Slope is not a stable structural constant; only T* is.
     solar_thermal_date = pd.Timestamp(cfg.get("solar_thermal_date", "2099-01-01"))
     struct_mask = daily.index < solar_thermal_date
     gas_struct = daily.loc[struct_mask, "use_gas_kwh"] if struct_mask.sum() > 10 else daily["use_gas_kwh"]
@@ -295,7 +301,6 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None,
                 best = (ss_res, t_star)
         _, heating_balance_temp_c = best
 
-        # Stage 2: refit slope+baseline together on the trailing 365 days, T* fixed.
         recent_cutoff = daily.index.max() - pd.Timedelta(days=365)
         gas_recent = daily.loc[daily.index > recent_cutoff, "use_gas_kwh"]
         tmin_recent = daily.loc[gas_recent.index, "tmin"]
@@ -303,11 +308,20 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None,
         gas_recent, tmin_recent = gas_recent[rvalid].values, tmin_recent[rvalid].values
         src_gas, src_tmin = (gas_recent, tmin_recent) if len(gas_recent) > 20 else (gas_struct, tmin_struct)
 
+        # Stage 2: direct mean on clearly-warm trailing days (tmin > 10C).
+        warm_mask = src_tmin > 10.0
+        if warm_mask.sum() >= 5:
+            hot_water_kwh = max(0.0, float(src_gas[warm_mask].mean()))
+        else:
+            heat = np.maximum(0.0, heating_balance_temp_c - src_tmin)
+            A = np.column_stack([np.ones(len(src_gas)), heat])
+            coef, *_ = np.linalg.lstsq(A, src_gas, rcond=None)
+            hot_water_kwh = max(0.0, float(coef[0]))
+
+        # Stage 3: slope only, forced through (T*, hot_water_kwh), for the chart line.
         heat = np.maximum(0.0, heating_balance_temp_c - src_tmin)
-        A = np.column_stack([np.ones(len(src_gas)), heat])
-        coef, *_ = np.linalg.lstsq(A, src_gas, rcond=None)
-        hot_water_kwh = max(0.0, float(coef[0]))
-        heating_slope_kwh_per_c = float(coef[1])
+        denom = float(np.sum(heat ** 2))
+        heating_slope_kwh_per_c = float(np.sum(heat * (src_gas - hot_water_kwh)) / denom) if denom > 0 else 0.0
 
     # Rolling averages
     for w_days in [7, 28, 365]:
