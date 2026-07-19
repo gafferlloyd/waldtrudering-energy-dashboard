@@ -203,9 +203,17 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None,
     m = meter.reindex(date_range)
     for col in ["elec", "gas", "water"]:
         m[col] = m[col].interpolate(method="index")
-    # Export meter: NaN before solar installation = 0 (no solar existed pre-2026-07)
+    # Export meter: interpolate interior gaps (e.g. a skipped manual reading day)
+    # same as gas/elec/water, THEN fill any remaining (leading) NaN with 0 -- that
+    # only covers genuinely pre-solar dates, before the export register existed.
+    # Filling gaps with 0 directly (previous behaviour) fabricated a phantom zero
+    # cumulative reading on any skipped day, corrupting the *next* day's diff into
+    # a huge fake spike (e.g. reported 306 kWh in one day -- verified 2026-07-18:
+    # sheet rows exist for 07-14/16/18 but not 07-15/17, a routine every-other-day
+    # gap, not an error -- the ~31 kWh real 2-day export delta got all attributed
+    # to a single day instead of split evenly across the gap).
     if "elec_export" in meter.columns:
-        m["elec_export"] = meter["elec_export"].reindex(date_range).fillna(0)
+        m["elec_export"] = meter["elec_export"].reindex(date_range).interpolate(method="index").fillna(0)
     else:
         m["elec_export"] = 0.0
 
