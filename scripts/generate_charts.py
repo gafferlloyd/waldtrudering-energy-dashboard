@@ -45,15 +45,15 @@ def _smooth(series: pd.Series, window: int) -> pd.Series:
 
 # German Energieausweis-style efficiency bands (kWh/(m²·a), final energy),
 # same anchors used elsewhere for this house's efficiency-class context.
+# Each zone is (lo, hi, label, colour) -- self-contained, not shared boundary
+# anchors, since each zone now gets its own internal vivid-to-black fade.
 _EFFICIENCY_ZONES = [
-    (0,   "#43A047"),  # A+
-    (30,  "#7CB342"),  # A
-    (50,  "#C0CA33"),  # B
-    (75,  "#FDD835"),  # C
-    (100, "#FFB300"),  # D
-    (130, "#FB8C00"),  # E
+    (0,   30,  "A+", "#43A047"),
+    (30,  50,  "A",  "#7CB342"),
+    (50,  75,  "B",  "#C0CA33"),
+    (75,  100, "C",  "#FDD835"),
+    (100, 130, "D",  "#FFB300"),
 ]
-_EFFICIENCY_ZONE_LABELS = ["A+", "A", "B", "C", "D", "E"]
 
 
 def _hex_to_rgb(h: str) -> tuple[int, int, int]:
@@ -70,48 +70,53 @@ def _lerp_hex(c1: str, c2: str, t: float) -> str:
     return f"rgb({r},{g},{b})"
 
 
-def _efficiency_zone_color(y: float, y_max: float) -> str:
-    """Interpolated Energieausweis-zone colour for a single kWh/m²/yr value --
-    the one place this mapping lives, shared by the background bands and the
-    value-coloured line so they always agree on what colour a value gets."""
-    zones = _EFFICIENCY_ZONES + [(y_max, _EFFICIENCY_ZONES[-1][1])]
-    y = max(0.0, min(y, y_max))
-    for (y0z, c0), (y1z, c1) in zip(zones, zones[1:]):
-        if y0z <= y <= y1z:
-            t = (y - y0z) / (y1z - y0z) if y1z > y0z else 0.0
-            return _lerp_hex(c0, c1, t)
-    return zones[-1][1]
+def _efficiency_zone_color(y: float) -> str:
+    """Colour for a single kWh/m²/yr value -- the one place this mapping
+    lives, shared by the background bands and the value-coloured line so they
+    always agree. Each zone is self-contained: full-saturation colour at its
+    upper bound (the worse-class boundary), fading straight to black by its
+    lower bound (the better-class boundary just below it), then resetting to
+    the next zone's own full colour -- not a continuous cross-zone gradient."""
+    if y >= _EFFICIENCY_ZONES[-1][1]:
+        return "#000000"
+    for lo, hi, _label, color in _EFFICIENCY_ZONES:
+        if lo <= y <= hi:
+            t = (hi - y) / (hi - lo) if hi > lo else 0.0  # 0 at top (vivid) -> 1 at bottom (black)
+            return _lerp_hex(color, "#000000", t)
+    return _EFFICIENCY_ZONES[0][3]  # below the lowest zone's lo (shouldn't happen, y>=0 always)
 
 
-def _add_efficiency_zones(fig: go.Figure, y_max: float, step: float = 2.0, opacity: float = 0.13) -> None:
-    """Soft background bands illustrating Energieausweis-style efficiency zones,
-    fading continuously from one zone's colour into the next (not hard edges) --
-    context for the kWh/m²/yr trend, not a precise classification tool."""
+def _add_efficiency_zones(fig: go.Figure, y_max: float, step: float = 1.0, opacity: float = 0.22) -> None:
+    """Background bands illustrating Energieausweis-style efficiency zones: each
+    zone fades from full colour at its upper bound to black at its lower bound,
+    with a white dotted line marking the upper bound itself -- context for the
+    kWh/m²/yr trend, not a precise classification tool."""
     y = 0.0
     while y < y_max:
         y1 = min(y + step, y_max)
-        color = _efficiency_zone_color((y + y1) / 2, y_max)
+        color = _efficiency_zone_color((y + y1) / 2)
         fig.add_hrect(y0=y, y1=y1, fillcolor=color, opacity=opacity, layer="below", line_width=0)
         y = y1
-    # Zone letter labels just inside the LEFT edge of the plot -- that's where
-    # the primary (kWh/m²/yr) axis these zones describe actually lives. Using
-    # "x domain" (the plotted data area, not the whole figure) rather than
-    # "paper" keeps them anchored to this axis regardless of legend/margin
-    # width; placing them at the figure's paper x=1.0 (tried first, wrong) put
-    # them next to the secondary MWh/year axis on the right instead.
-    bounds = [b for b, _ in _EFFICIENCY_ZONES] + [y_max]
-    for i, label in enumerate(_EFFICIENCY_ZONE_LABELS):
-        lo, hi = bounds[i], bounds[i + 1]
+    for lo, hi, label, _color in _EFFICIENCY_ZONES:
         if lo >= y_max:
             break
+        # White dotted line at the zone's upper bound (the boundary with the
+        # next worse class above it).
+        fig.add_hline(y=hi, line_dash="dot", line_color="white", line_width=1, opacity=0.7)
+        # Zone letter just inside the LEFT edge of the plot -- that's where the
+        # primary (kWh/m²/yr) axis these zones describe actually lives. Using
+        # "x domain" (the plotted data area, not the whole figure) rather than
+        # "paper" keeps it anchored to this axis regardless of legend/margin
+        # width; placing it at the figure's paper x=1.0 (tried first, wrong)
+        # put it next to the secondary MWh/year axis on the right instead.
         fig.add_annotation(
             xref="x domain", x=0.0, y=(lo + min(hi, y_max)) / 2,
-            text=label, showarrow=False, font=dict(size=10, color="#8C8C8C"),
+            text=label, showarrow=False, font=dict(size=10, color="white"),
             xanchor="left", xshift=4,
         )
 
 
-def _add_value_colored_line(fig: go.Figure, x, y, y_max: float, name: str,
+def _add_value_colored_line(fig: go.Figure, x, y, name: str,
                              width: float = 2.5, target_segments: int = 150) -> None:
     """A line whose colour tracks its own y-value against the efficiency zones,
     instead of one flat colour for the whole trace. Plotly's `line.color` only
@@ -127,7 +132,7 @@ def _add_value_colored_line(fig: go.Figure, x, y, y_max: float, name: str,
     for i in range(0, n - 1, step):
         j = min(i + step, n - 1)
         seg_y = y[i:j + 1]
-        color = _efficiency_zone_color(float(np.mean(seg_y)), y_max)
+        color = _efficiency_zone_color(float(np.mean(seg_y)))
         fig.add_trace(go.Scatter(
             x=x[i:j + 1], y=seg_y, mode="lines",
             line=dict(color=color, width=width),
@@ -138,40 +143,51 @@ def _add_value_colored_line(fig: go.Figure, x, y, y_max: float, name: str,
 
 # ── Individual chart functions ────────────────────────────────────────────────
 
-def chart_annual_gas(daily: pd.DataFrame, hot_water_kwh: float) -> go.Figure:
+def chart_efficiency(daily: pd.DataFrame) -> go.Figure:
     fig = go.Figure()
     _EFF_Y_MAX = 130.0  # covers this house's full historical 1yr/3yr range (~25-115) with headroom
     _add_efficiency_zones(fig, _EFF_Y_MAX)
     _s1 = daily.index[0] + pd.Timedelta(days=365)
     _s3 = daily.index[0] + pd.Timedelta(days=3 * 365)
 
-    # Primary axis: heating efficiency kWh/m²/yr
     eff1 = daily["efficiency_kwh_m2"].loc[_s1:].dropna()
     eff3 = daily["efficiency_3yr_kwh_m2"].loc[_s3:].dropna()
     fig.add_trace(go.Scatter(x=eff1.index, y=eff1.values,
                              name="Efficiency 1yr",
                              line=dict(color=_PALETTE[0], width=1, dash="dot"),
                              opacity=0.6))
-    _add_value_colored_line(fig, eff3.index, eff3.values, _EFF_Y_MAX, "Efficiency 3yr")
+    _add_value_colored_line(fig, eff3.index, eff3.values, "Efficiency 3yr")
 
-    # Secondary axis: absolute gas use MWh/yr
-    yr1 = daily["gas_annual_kwh"].loc[_s1:].dropna() / 1000
-    yr3 = daily["use_gas_kwh"].rolling(3 * 365, min_periods=365).sum().loc[_s3:].dropna() / 3000
-    fig.add_trace(go.Scatter(x=yr1.index, y=yr1.values,
-                             name="Gas 1yr",
-                             line=dict(color=_PALETTE[1], width=1, dash="dot"),
-                             yaxis="y2", opacity=0.6))
-    fig.add_trace(go.Scatter(x=yr3.index, y=yr3.values,
-                             name="Gas 3yr avg",
-                             line=dict(color=_PALETTE[1], width=2),
+    fig.update_layout(
+        title="Heating Efficiency (rolling)",
+        xaxis_title="Date",
+        yaxis=dict(title="kWh / m² / year", range=[0, _EFF_Y_MAX]),
+    )
+    return fig
+
+
+def chart_gas(daily: pd.DataFrame) -> go.Figure:
+    """Same shape as chart_electricity/chart_water: 7-day avg (daily units) on
+    the primary axis, rolling-annual total on the secondary -- gas used to only
+    appear bundled into the efficiency chart's secondary axis; broken out here
+    so gas/electricity/water are all presented the same way."""
+    fig = go.Figure()
+    _s1 = daily.index[0] + pd.Timedelta(days=365)
+    gas_ann = daily["gas_annual_kwh"].loc[_s1:].dropna() / 1000
+
+    fig.add_trace(go.Scatter(x=daily.index, y=daily["gas_ma7"],
+                             name="7-day avg", line=dict(color=_PALETTE[2], width=1),
+                             opacity=0.6))
+    fig.add_trace(go.Scatter(x=gas_ann.index, y=gas_ann.values,
+                             name="Annual (rolling)", line=dict(color=_PALETTE[0], width=2),
                              yaxis="y2"))
 
     fig.update_layout(
-        title="Annual Gas Use & Heating Efficiency (rolling)",
+        title="Gas Use",
         xaxis_title="Date",
-        yaxis=dict(title="kWh / m² / year", range=[0, _EFF_Y_MAX]),
+        yaxis=dict(title="kWh / day", range=[0, 150]),
         yaxis2=dict(title="MWh / year", overlaying="y", side="right",
-                    range=[0, 25], showgrid=False),
+                    range=[0, 20], showgrid=False),
     )
     return fig
 
@@ -595,9 +611,10 @@ def build_all(data: dict) -> list[dict]:
     recent_doy  = data["recent_gas_doy"]
     weather_dwd = data.get("weather_dwd")
     charts = [
-        ("Annual Gas Use",          "chart_gas",      chart_annual_gas(daily, hot_water)),
+        ("Gas Use",                 "chart_gas",      chart_gas(daily)),
         ("Electricity Use",         "chart_elec",     chart_electricity(daily)),
         ("Water Use",               "chart_water",    chart_water(daily)),
+        ("Heating Efficiency",      "chart_efficiency", chart_efficiency(daily)),
         ("Gas vs Temperature",      "chart_gas_temp", chart_gas_vs_temp(daily, hot_water, heating_balance_temp_c, heating_slope_kwh_per_c)),
         ("Gas by Day-of-Year",      "chart_doy",      chart_gas_day_of_year(daily, median_doy, recent_doy)),
         ("Cumulative Gas by Year",  "chart_cum_gas",  chart_cumulative_gas_by_year(daily, year_groups)),
