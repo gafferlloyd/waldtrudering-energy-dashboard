@@ -43,10 +43,71 @@ def _smooth(series: pd.Series, window: int) -> pd.Series:
     return series.rolling(window, center=True, min_periods=window // 2).mean()
 
 
+# German Energieausweis-style efficiency bands (kWh/(m²·a), final energy),
+# same anchors used elsewhere for this house's efficiency-class context.
+_EFFICIENCY_ZONES = [
+    (0,   "#43A047"),  # A+
+    (30,  "#7CB342"),  # A
+    (50,  "#C0CA33"),  # B
+    (75,  "#FDD835"),  # C
+    (100, "#FFB300"),  # D
+    (130, "#FB8C00"),  # E
+]
+_EFFICIENCY_ZONE_LABELS = ["A+", "A", "B", "C", "D", "E"]
+
+
+def _hex_to_rgb(h: str) -> tuple[int, int, int]:
+    h = h.lstrip("#")
+    return int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+
+
+def _lerp_hex(c1: str, c2: str, t: float) -> str:
+    r1, g1, b1 = _hex_to_rgb(c1)
+    r2, g2, b2 = _hex_to_rgb(c2)
+    r = round(r1 + (r2 - r1) * t)
+    g = round(g1 + (g2 - g1) * t)
+    b = round(b1 + (b2 - b1) * t)
+    return f"rgb({r},{g},{b})"
+
+
+def _add_efficiency_zones(fig: go.Figure, y_max: float, step: float = 2.0, opacity: float = 0.13) -> None:
+    """Soft background bands illustrating Energieausweis-style efficiency zones,
+    fading continuously from one zone's colour into the next (not hard edges) --
+    context for the kWh/m²/yr trend, not a precise classification tool."""
+    zones = _EFFICIENCY_ZONES + [(y_max, _EFFICIENCY_ZONES[-1][1])]
+    y = 0.0
+    while y < y_max:
+        y1 = min(y + step, y_max)
+        mid = (y + y1) / 2
+        # Find the two zone anchors bracketing `mid` and interpolate between them.
+        for (y0z, c0), (y1z, c1) in zip(zones, zones[1:]):
+            if y0z <= mid <= y1z:
+                t = (mid - y0z) / (y1z - y0z) if y1z > y0z else 0.0
+                color = _lerp_hex(c0, c1, t)
+                break
+        else:
+            color = zones[-1][1]
+        fig.add_hrect(y0=y, y1=y1, fillcolor=color, opacity=opacity, layer="below", line_width=0)
+        y = y1
+    # Zone letter labels at the right edge, at each zone's vertical midpoint.
+    bounds = [b for b, _ in _EFFICIENCY_ZONES] + [y_max]
+    for i, label in enumerate(_EFFICIENCY_ZONE_LABELS):
+        lo, hi = bounds[i], bounds[i + 1]
+        if lo >= y_max:
+            break
+        fig.add_annotation(
+            xref="paper", x=1.0, y=(lo + min(hi, y_max)) / 2,
+            text=label, showarrow=False, font=dict(size=10, color="#8C8C8C"),
+            xanchor="left", xshift=4,
+        )
+
+
 # ── Individual chart functions ────────────────────────────────────────────────
 
 def chart_annual_gas(daily: pd.DataFrame, hot_water_kwh: float) -> go.Figure:
     fig = go.Figure()
+    _EFF_Y_MAX = 130.0  # covers this house's full historical 1yr/3yr range (~25-115) with headroom
+    _add_efficiency_zones(fig, _EFF_Y_MAX)
     _s1 = daily.index[0] + pd.Timedelta(days=365)
     _s3 = daily.index[0] + pd.Timedelta(days=3 * 365)
 
@@ -76,7 +137,7 @@ def chart_annual_gas(daily: pd.DataFrame, hot_water_kwh: float) -> go.Figure:
     fig.update_layout(
         title="Annual Gas Use & Heating Efficiency (rolling)",
         xaxis_title="Date",
-        yaxis=dict(title="kWh / m² / year"),
+        yaxis=dict(title="kWh / m² / year", range=[0, _EFF_Y_MAX]),
         yaxis2=dict(title="MWh / year", overlaying="y", side="right",
                     range=[0, 25], showgrid=False),
     )

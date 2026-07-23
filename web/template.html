@@ -78,6 +78,7 @@
     }
     .stat-label { font-size: 0.7rem; color: var(--subtext); text-transform: uppercase; letter-spacing: 0.05em; }
     .stat-value { font-size: 1.1rem; font-weight: 600; color: var(--accent); }
+    .stat-value-sub { font-size: 0.75rem; font-weight: 500; color: var(--subtext); }
     .stat-unit  { font-size: 0.7rem; color: var(--subtext); }
     .stat-trend { font-size: 0.7rem; font-weight: 500; }
     .trend-good { color: var(--green); }
@@ -195,7 +196,7 @@
   </div>
   <div class="stat">
     <span class="stat-label" data-i18n="efficiency_label">Efficiency (3yr)</span>
-    <span class="stat-value">{{ stats.efficiency_kwh_m2 }}</span>
+    <span class="stat-value">{{ stats.efficiency_kwh_m2 }} <span class="stat-value-sub">({{ stats.efficiency_1yr_kwh_m2 }})</span></span>
     <span class="stat-unit" data-i18n="kwh_m2_year">kWh / m² / year</span>
   </div>
   <div class="stat">

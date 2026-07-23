@@ -138,6 +138,7 @@ def main():
                              if daily["use_water_m3"].rolling(365, min_periods=180).sum().dropna().any() else 0,
         "annual_cost_eur":   round(annual("cost_total_annual")),
         "efficiency_kwh_m2": round(annual("efficiency_3yr_kwh_m2"), 1),
+        "efficiency_1yr_kwh_m2": round(annual("efficiency_kwh_m2"), 1),
         "hot_water_kwh":     round(data["hot_water_kwh"], 1),
         # Trend vs same period 1 year ago (percentage change, None if unavailable)
         "gas_7d_trend":      trend_pct(sum7_at("use_gas_kwh"), sum7_at("use_gas_kwh", 365)),
