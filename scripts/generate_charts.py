@@ -70,36 +70,70 @@ def _lerp_hex(c1: str, c2: str, t: float) -> str:
     return f"rgb({r},{g},{b})"
 
 
+def _efficiency_zone_color(y: float, y_max: float) -> str:
+    """Interpolated Energieausweis-zone colour for a single kWh/m²/yr value --
+    the one place this mapping lives, shared by the background bands and the
+    value-coloured line so they always agree on what colour a value gets."""
+    zones = _EFFICIENCY_ZONES + [(y_max, _EFFICIENCY_ZONES[-1][1])]
+    y = max(0.0, min(y, y_max))
+    for (y0z, c0), (y1z, c1) in zip(zones, zones[1:]):
+        if y0z <= y <= y1z:
+            t = (y - y0z) / (y1z - y0z) if y1z > y0z else 0.0
+            return _lerp_hex(c0, c1, t)
+    return zones[-1][1]
+
+
 def _add_efficiency_zones(fig: go.Figure, y_max: float, step: float = 2.0, opacity: float = 0.13) -> None:
     """Soft background bands illustrating Energieausweis-style efficiency zones,
     fading continuously from one zone's colour into the next (not hard edges) --
     context for the kWh/m²/yr trend, not a precise classification tool."""
-    zones = _EFFICIENCY_ZONES + [(y_max, _EFFICIENCY_ZONES[-1][1])]
     y = 0.0
     while y < y_max:
         y1 = min(y + step, y_max)
-        mid = (y + y1) / 2
-        # Find the two zone anchors bracketing `mid` and interpolate between them.
-        for (y0z, c0), (y1z, c1) in zip(zones, zones[1:]):
-            if y0z <= mid <= y1z:
-                t = (mid - y0z) / (y1z - y0z) if y1z > y0z else 0.0
-                color = _lerp_hex(c0, c1, t)
-                break
-        else:
-            color = zones[-1][1]
+        color = _efficiency_zone_color((y + y1) / 2, y_max)
         fig.add_hrect(y0=y, y1=y1, fillcolor=color, opacity=opacity, layer="below", line_width=0)
         y = y1
-    # Zone letter labels at the right edge, at each zone's vertical midpoint.
+    # Zone letter labels just inside the LEFT edge of the plot -- that's where
+    # the primary (kWh/m²/yr) axis these zones describe actually lives. Using
+    # "x domain" (the plotted data area, not the whole figure) rather than
+    # "paper" keeps them anchored to this axis regardless of legend/margin
+    # width; placing them at the figure's paper x=1.0 (tried first, wrong) put
+    # them next to the secondary MWh/year axis on the right instead.
     bounds = [b for b, _ in _EFFICIENCY_ZONES] + [y_max]
     for i, label in enumerate(_EFFICIENCY_ZONE_LABELS):
         lo, hi = bounds[i], bounds[i + 1]
         if lo >= y_max:
             break
         fig.add_annotation(
-            xref="paper", x=1.0, y=(lo + min(hi, y_max)) / 2,
+            xref="x domain", x=0.0, y=(lo + min(hi, y_max)) / 2,
             text=label, showarrow=False, font=dict(size=10, color="#8C8C8C"),
             xanchor="left", xshift=4,
         )
+
+
+def _add_value_colored_line(fig: go.Figure, x, y, y_max: float, name: str,
+                             width: float = 2.5, target_segments: int = 150) -> None:
+    """A line whose colour tracks its own y-value against the efficiency zones,
+    instead of one flat colour for the whole trace. Plotly's `line.color` only
+    takes a single colour for a solid "lines" trace (array colours only work
+    for markers), so this is built from many short segments, each coloured by
+    its own local value -- downsampled so the segment count stays reasonable
+    (a daily series over 10 years would otherwise be ~3600 tiny traces)."""
+    n = len(y)
+    if n < 2:
+        return
+    step = max(1, n // target_segments)
+    show_legend = True
+    for i in range(0, n - 1, step):
+        j = min(i + step, n - 1)
+        seg_y = y[i:j + 1]
+        color = _efficiency_zone_color(float(np.mean(seg_y)), y_max)
+        fig.add_trace(go.Scatter(
+            x=x[i:j + 1], y=seg_y, mode="lines",
+            line=dict(color=color, width=width),
+            name=name, legendgroup=name, showlegend=show_legend,
+        ))
+        show_legend = False
 
 
 # ── Individual chart functions ────────────────────────────────────────────────
@@ -118,9 +152,7 @@ def chart_annual_gas(daily: pd.DataFrame, hot_water_kwh: float) -> go.Figure:
                              name="Efficiency 1yr",
                              line=dict(color=_PALETTE[0], width=1, dash="dot"),
                              opacity=0.6))
-    fig.add_trace(go.Scatter(x=eff3.index, y=eff3.values,
-                             name="Efficiency 3yr",
-                             line=dict(color=_PALETTE[0], width=2.5)))
+    _add_value_colored_line(fig, eff3.index, eff3.values, _EFF_Y_MAX, "Efficiency 3yr")
 
     # Secondary axis: absolute gas use MWh/yr
     yr1 = daily["gas_annual_kwh"].loc[_s1:].dropna() / 1000
