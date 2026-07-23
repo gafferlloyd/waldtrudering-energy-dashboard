@@ -70,13 +70,27 @@ def _lerp_hex(c1: str, c2: str, t: float) -> str:
     return f"rgb({r},{g},{b})"
 
 
+def _efficiency_zone_base_color(y: float) -> str:
+    """Flat, fully-saturated zone colour for a value -- no fade. Used for the
+    value-coloured line: the line itself should read as one clear colour per
+    zone (the colour at that zone's *top*/vivid end), not fade internally --
+    only the background bands fade, via _efficiency_zone_color below."""
+    if y >= _EFFICIENCY_ZONES[-1][1]:
+        return _EFFICIENCY_ZONES[-1][3]
+    for lo, hi, _label, color in _EFFICIENCY_ZONES:
+        if lo <= y <= hi:
+            return color
+    return _EFFICIENCY_ZONES[0][3]
+
+
 def _efficiency_zone_color(y: float) -> str:
-    """Colour for a single kWh/m²/yr value -- the one place this mapping
-    lives, shared by the background bands and the value-coloured line so they
-    always agree. Each zone is self-contained: full-saturation colour at its
-    upper bound (the worse-class boundary), fading straight to black by its
-    lower bound (the better-class boundary just below it), then resetting to
-    the next zone's own full colour -- not a continuous cross-zone gradient."""
+    """Colour for a single kWh/m²/yr value, faded within its zone -- used for
+    the background bands only (see _efficiency_zone_base_color for the flat
+    per-zone colour used by the line). Each zone is self-contained: full-
+    saturation colour at its upper bound (the worse-class boundary), fading
+    straight to black by its lower bound (the better-class boundary just below
+    it), then resetting to the next zone's own full colour on the way up --
+    not a continuous cross-zone gradient."""
     if y >= _EFFICIENCY_ZONES[-1][1]:
         return "#000000"
     for lo, hi, _label, color in _EFFICIENCY_ZONES:
@@ -132,7 +146,7 @@ def _add_value_colored_line(fig: go.Figure, x, y, name: str,
     for i in range(0, n - 1, step):
         j = min(i + step, n - 1)
         seg_y = y[i:j + 1]
-        color = _efficiency_zone_color(float(np.mean(seg_y)))
+        color = _efficiency_zone_base_color(float(np.mean(seg_y)))
         fig.add_trace(go.Scatter(
             x=x[i:j + 1], y=seg_y, mode="lines",
             line=dict(color=color, width=width),
@@ -159,7 +173,7 @@ def chart_efficiency(daily: pd.DataFrame) -> go.Figure:
     _add_value_colored_line(fig, eff3.index, eff3.values, "Efficiency 3yr")
 
     fig.update_layout(
-        title="Heating Efficiency (rolling)",
+        title="Energy Efficiency (rolling)",
         xaxis_title="Date",
         yaxis=dict(title="kWh / m² / year", range=[0, _EFF_Y_MAX]),
     )
