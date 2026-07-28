@@ -310,7 +310,10 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None,
         _, heating_balance_temp_c = best
 
         recent_cutoff = daily.index.max() - pd.Timedelta(days=365)
-        gas_recent = daily.loc[daily.index > recent_cutoff, "use_gas_kwh"]
+        gas_recent = daily.loc[
+            (daily.index > recent_cutoff) & (daily.index < solar_thermal_date),
+            "use_gas_kwh"
+        ]
         tmin_recent = daily.loc[gas_recent.index, "tmin"]
         rvalid = gas_recent.notna() & tmin_recent.notna()
         gas_recent, tmin_recent = gas_recent[rvalid].values, tmin_recent[rvalid].values
