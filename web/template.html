@@ -63,6 +63,28 @@
     .lang-btn:hover  { opacity: 0.85; }
     .lang-btn.active { opacity: 1; border-color: var(--border); background: var(--overlay); }
 
+    .timerange-bar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0.5rem 2rem;
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    .time-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      cursor: pointer;
+      color: var(--text);
+      font-size: 0.85rem;
+      padding: 0.2rem 0.7rem;
+      opacity: 0.5;
+      transition: opacity 0.15s;
+    }
+    .time-btn:hover  { opacity: 0.85; }
+    .time-btn.active { opacity: 1; border-color: var(--accent); background: var(--overlay); }
+
     .stats-bar {
       background: var(--surface);
       border-bottom: 1px solid var(--border);
@@ -106,16 +128,6 @@
     }
     .chart-card.full-width { grid-column: 1 / -1; }
     .chart-card .plotly-graph-div { width: 100% !important; }
-
-    footer {
-      text-align: center;
-      padding: 1.5rem;
-      color: var(--subtext);
-      font-size: 0.75rem;
-      border-top: 1px solid var(--border);
-      margin-top: 1rem;
-    }
-    footer a { color: var(--accent); text-decoration: none; }
   </style>
 </head>
 <body>
@@ -129,7 +141,8 @@
 
 <header>
   <h1 data-i18n="site_title">81827 Waldtrudering Energy Dashboard</h1>
-  <span class="meta" data-i18n-tpl="data_through" data-date="{{ stats.last_update }}">Data through {{ stats.last_update }}</span>
+  <span class="meta" data-i18n-tpl="meter_through" data-date="{{ stats.meter_last_date }}">Meter through {{ stats.meter_last_date }}</span>
+  <span class="meta" data-i18n-tpl="weather_through" data-date="{{ stats.weather_last_date }}">Weather through {{ stats.weather_last_date }}</span>
   <div class="header-right">
     <span class="meta" data-i18n-tpl="built_at" data-time="{{ stats.build_time }}">Built {{ stats.build_time }}</span>
     <div class="lang-switcher">
@@ -206,6 +219,12 @@
   </div>
 </div>
 
+<div class="timerange-bar">
+  <button class="time-btn active" data-range="all" data-i18n="btn_all">All time</button>
+  <button class="time-btn" data-range="3yr" data-i18n="btn_3yr">3 years</button>
+  <button class="time-btn" data-range="1yr" data-i18n="btn_1yr">1 year</button>
+</div>
+
 <main>
   <div class="chart-grid">
     {% for chart in charts %}
@@ -217,15 +236,6 @@
   </div>
 </main>
 
-<footer>
-  <span data-i18n="footer_meter">Meter readings entered manually into</span>
-  <a href="https://docs.google.com/spreadsheets/d/1TyTO6p7LE1mKPrm77rjBYjc1zEEQHID6cAjYZX17DAU" target="_blank">Google Sheets</a> ·
-  <span data-i18n="footer_weather">Weather data from</span>
-  <a href="https://www.dwd.de" target="_blank">DWD</a> ·
-  <span data-i18n="footer_built">Built with Python + Plotly</span> ·
-  <a href="https://github.com/gafferlloyd/waldtrudering-energy-dashboard" target="_blank" data-i18n="footer_source">Source</a>
-</footer>
-
 <script>
   const config = { responsive: true, displayModeBar: false };
 
@@ -236,17 +246,50 @@
   })();
   {% endfor %}
 
+  // ── Time-range buttons ────────────────────────────────────────────────────
+  const DATE_CHART_IDS = [
+    'chart_gas', 'chart_elec', 'chart_water',
+    'chart_efficiency', 'chart_eff_trend', 'chart_cost'
+  ];
+  const LAST_DATE_ISO = '{{ stats.last_date_iso }}';
+
+  function setTimeRange(mode) {
+    let update;
+    if (mode === 'all') {
+      update = {'xaxis.autorange': true};
+    } else {
+      const end = new Date(LAST_DATE_ISO);
+      const start = new Date(end);
+      start.setFullYear(start.getFullYear() - (mode === '3yr' ? 3 : 1));
+      update = {
+        'xaxis.autorange': false,
+        'xaxis.range': [start.toISOString().slice(0, 10), end.toISOString().slice(0, 10)]
+      };
+    }
+    DATE_CHART_IDS.forEach(id => {
+      if (document.getElementById(id)) {
+        try { Plotly.relayout(id, update); } catch(e) {}
+      }
+    });
+    document.querySelectorAll('.time-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.range === mode));
+  }
+
+  document.querySelectorAll('.time-btn').forEach(b =>
+    b.addEventListener('click', () => setTimeRange(b.dataset.range)));
+
   // ── i18n ──────────────────────────────────────────────────────────────────
   const CHART_IDS = [
-    'chart_gas','chart_elec','chart_water','chart_gas_temp','chart_doy',
-    'chart_cum_gas','chart_cum_dd','chart_eff_trend','chart_cost',
-    'chart_gdd','chart_weather'
+    'chart_gas','chart_elec','chart_water','chart_efficiency',
+    'chart_gas_temp','chart_doy','chart_cum_gas','chart_cum_dd',
+    'chart_eff_trend','chart_cost','chart_gdd','chart_weather'
   ];
 
   const T = {
     en: {
       site_title: "81827 Waldtrudering Energy Dashboard",
-      data_through: "Data through", built_at: "Built",
+      meter_through: "Meter through", weather_through: "Weather through", built_at: "Built",
+      btn_all: "All time", btn_3yr: "3 years", btn_1yr: "1 year",
       gas_daily_label:   "Gas — daily / 7d avg",
       gas_annual_label:  "Gas — annual",
       elec_daily_label:  "Electricity — daily / 7d avg",
@@ -259,24 +302,23 @@
       kwh_avg: "kWh avg", mwh_year: "MWh / year", m3_avg: "m³ avg", m3_year: "m³ / year",
       kwh_day: "kWh/day", kwh_year: "kWh / year", kwh_day2: "kWh / day",
       gas_elec: "gas + electricity", kwh_m2_year: "kWh / m² / year", vs_last_year: "vs last year",
-      footer_meter: "Meter readings entered manually into", footer_weather: "Weather data from",
-      footer_built: "Built with Python + Plotly", footer_source: "Source",
-      chart_gas:      "Gas Use",
-      chart_elec:     "Electricity Use",
-      chart_water:    "Water Use",
+      chart_gas:        "Gas Use",
+      chart_elec:       "Electricity Use",
+      chart_water:      "Water Use",
       chart_efficiency: "Energy Efficiency (rolling)",
-      chart_gas_temp: "Gas Use vs. Min Temperature",
-      chart_doy:      "Gas Use by Day-of-Year",
-      chart_cum_gas:  "Cumulative Gas Use by Heating Year (Jul → Jun)",
-      chart_cum_dd:   "Cumulative Heating Degree Days by Heating Year (Jul → Jun)",
-      chart_eff_trend:"Heating Efficiency Development (kWh gas per degree-day)",
-      chart_cost:     "Annual Energy Cost (rolling)",
-      chart_gdd:      "Cumulative Gas Energy vs. Cumulative Degree Days",
-      chart_weather:  "Weather Overview (rolling annual)  ·  dotted = 1992–2021 mean",
+      chart_gas_temp:   "Gas Use vs. Min Temperature",
+      chart_doy:        "Gas Use by Day-of-Year",
+      chart_cum_gas:    "Cumulative Gas Use by Heating Year (Jul → Jun)",
+      chart_cum_dd:     "Cumulative Heating Degree Days by Heating Year (Jul → Jun)",
+      chart_eff_trend:  "Heating Efficiency Development (kWh gas per degree-day)",
+      chart_cost:       "Annual Energy Cost (rolling)",
+      chart_gdd:        "Cumulative Gas Energy vs. Cumulative Degree Days",
+      chart_weather:    "Weather Overview (rolling annual)  ·  dotted = 1992–2021 mean",
     },
     de: {
       site_title: "81827 Waldtrudering Energie-Dashboard",
-      data_through: "Daten bis", built_at: "Erstellt",
+      meter_through: "Zähler bis", weather_through: "Wetter bis", built_at: "Erstellt",
+      btn_all: "Gesamt", btn_3yr: "3 Jahre", btn_1yr: "1 Jahr",
       gas_daily_label:   "Gas — täglich / 7T-Ø",
       gas_annual_label:  "Gas — jährlich",
       elec_daily_label:  "Strom — täglich / 7T-Ø",
@@ -289,24 +331,23 @@
       kwh_avg: "kWh Ø", mwh_year: "MWh / Jahr", m3_avg: "m³ Ø", m3_year: "m³ / Jahr",
       kwh_day: "kWh/Tag", kwh_year: "kWh / Jahr", kwh_day2: "kWh / Tag",
       gas_elec: "Gas + Strom", kwh_m2_year: "kWh / m² / Jahr", vs_last_year: "vs. Vorjahr",
-      footer_meter: "Zählerstände manuell eingetragen in", footer_weather: "Wetterdaten von",
-      footer_built: "Erstellt mit Python + Plotly", footer_source: "Quellcode",
-      chart_gas:      "Gasverbrauch",
-      chart_elec:     "Stromverbrauch",
-      chart_water:    "Wasserverbrauch",
+      chart_gas:        "Gasverbrauch",
+      chart_elec:       "Stromverbrauch",
+      chart_water:      "Wasserverbrauch",
       chart_efficiency: "Energieeffizienz (gleitend)",
-      chart_gas_temp: "Gas vs. Mindesttemperatur",
-      chart_doy:      "Gasverbrauch nach Jahrestag",
-      chart_cum_gas:  "Kumulativer Gasverbrauch nach Heizsaison (Jul → Jun)",
-      chart_cum_dd:   "Kumulierte Heizgradtage nach Heizsaison (Jul → Jun)",
-      chart_eff_trend:"Entwicklung der Heizeffizienz (kWh Gas je Gradtag)",
-      chart_cost:     "Jährliche Energiekosten (rollierend)",
-      chart_gdd:      "Kumulativer Gasverbrauch vs. Heizgradtage",
-      chart_weather:  "Wetterübersicht (rollierend jährlich)  ·  gepunktet = Mittel 1992–2021",
+      chart_gas_temp:   "Gas vs. Mindesttemperatur",
+      chart_doy:        "Gasverbrauch nach Jahrestag",
+      chart_cum_gas:    "Kumulativer Gasverbrauch nach Heizsaison (Jul → Jun)",
+      chart_cum_dd:     "Kumulierte Heizgradtage nach Heizsaison (Jul → Jun)",
+      chart_eff_trend:  "Entwicklung der Heizeffizienz (kWh Gas je Gradtag)",
+      chart_cost:       "Jährliche Energiekosten (rollierend)",
+      chart_gdd:        "Kumulativer Gasverbrauch vs. Heizgradtage",
+      chart_weather:    "Wetterübersicht (rollierend jährlich)  ·  gepunktet = Mittel 1992–2021",
     },
     it: {
       site_title: "81827 Waldtrudering Dashboard Energetico",
-      data_through: "Dati fino al", built_at: "Creato",
+      meter_through: "Contatori al", weather_through: "Meteo al", built_at: "Creato",
+      btn_all: "Tutto", btn_3yr: "3 anni", btn_1yr: "1 anno",
       gas_daily_label:   "Gas — giorn. / media 7g",
       gas_annual_label:  "Gas — annuale",
       elec_daily_label:  "Elettricità — giorn. / media 7g",
@@ -319,20 +360,18 @@
       kwh_avg: "kWh media", mwh_year: "MWh / anno", m3_avg: "m³ media", m3_year: "m³ / anno",
       kwh_day: "kWh/giorno", kwh_year: "kWh / anno", kwh_day2: "kWh / giorno",
       gas_elec: "gas + elettricità", kwh_m2_year: "kWh / m² / anno", vs_last_year: "vs. anno scorso",
-      footer_meter: "Letture contatore inserite in", footer_weather: "Dati meteo da",
-      footer_built: "Sviluppato con Python + Plotly", footer_source: "Sorgente",
-      chart_gas:      "Consumo Gas",
-      chart_elec:     "Consumo Elettricità",
-      chart_water:    "Consumo Acqua",
+      chart_gas:        "Consumo Gas",
+      chart_elec:       "Consumo Elettricità",
+      chart_water:      "Consumo Acqua",
       chart_efficiency: "Efficienza Energetica (media mobile)",
-      chart_gas_temp: "Gas vs. Temperatura Minima",
-      chart_doy:      "Consumo Gas per Giorno dell'Anno",
-      chart_cum_gas:  "Gas Cumulativo per Anno di Riscaldamento (Lug → Giu)",
-      chart_cum_dd:   "Gradi-Giorno Cumulativi per Anno di Riscaldamento (Lug → Giu)",
-      chart_eff_trend:"Sviluppo Efficienza Riscaldamento (kWh gas per grado-giorno)",
-      chart_cost:     "Costo Energetico Annuale (scorrevole)",
-      chart_gdd:      "Gas Cumulativo vs. Gradi-Giorno",
-      chart_weather:  "Panoramica Meteo (annuale scorrevole)  ·  punteggiato = media 1992–2021",
+      chart_gas_temp:   "Gas vs. Temperatura Minima",
+      chart_doy:        "Consumo Gas per Giorno dell'Anno",
+      chart_cum_gas:    "Gas Cumulativo per Anno di Riscaldamento (Lug → Giu)",
+      chart_cum_dd:     "Gradi-Giorno Cumulativi per Anno di Riscaldamento (Lug → Giu)",
+      chart_eff_trend:  "Sviluppo Efficienza Riscaldamento (kWh gas per grado-giorno)",
+      chart_cost:       "Costo Energetico Annuale (scorrevole)",
+      chart_gdd:        "Gas Cumulativo vs. Gradi-Giorno",
+      chart_weather:    "Panoramica Meteo (annuale scorrevole)  ·  punteggiato = media 1992–2021",
     }
   };
 

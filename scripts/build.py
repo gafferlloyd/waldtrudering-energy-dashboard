@@ -122,7 +122,9 @@ def main():
     water_annual_trend = trend_pct(_water_now, _water_prev)
 
     stats = {
-        "last_update":       daily.index[-1].strftime("%d %b %Y"),
+        "meter_last_date":   data["meter_raw"].index.max().strftime("%d %b %Y"),
+        "weather_last_date": data["weather_dwd"].index.max().strftime("%d %b %Y"),
+        "last_date_iso":     daily.index[-1].strftime("%Y-%m-%d"),
         "build_time":        datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
         # Daily (last non-zero reading / 7-day avg)
         "gas_daily_kwh":     round(last_nonzero("use_gas_kwh"), 1),
@@ -137,7 +139,8 @@ def main():
         "water_annual_m3":   round(daily["use_water_m3"].rolling(365, min_periods=180).sum().dropna().iloc[-1], 0)
                              if daily["use_water_m3"].rolling(365, min_periods=180).sum().dropna().any() else 0,
         "annual_cost_eur":   round(annual("cost_total_annual")),
-        "efficiency_kwh_m2": round(annual("efficiency_3yr_kwh_m2"), 1),
+        "efficiency_kwh_m2":     round(annual("efficiency_3yr_kwh_m2"), 1),
+        "efficiency_1yr_kwh_m2": round(annual("efficiency_kwh_m2"), 1),
         "efficiency_1yr_kwh_m2": round(annual("efficiency_kwh_m2"), 1),
         "hot_water_kwh":     round(data["hot_water_kwh"], 1),
         # Trend vs same period 1 year ago (percentage change, None if unavailable)
