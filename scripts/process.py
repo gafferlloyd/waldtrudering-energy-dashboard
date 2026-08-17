@@ -100,7 +100,14 @@ def _load_weather_fresh(path: Path) -> pd.DataFrame:
 
 
 def load_dwd_weather(cache_dir: Path | None = None) -> pd.DataFrame | None:
-    """Load DWD airport weather from cache/dwd_weather.csv, or None if absent."""
+    """Load DWD airport weather from cache/dwd_weather.csv, or None if absent.
+
+    DWD's own sunshine sensor (SDK) has been dead since 2026-05-01. Wherever
+    DWD's sunshine is missing, backfill from LMU Munich-city (cache/lmu_city_weather.csv)
+    — never Garching, which runs a different microclimate. This is a plain
+    NaN-fill: the moment DWD reports real sunshine again, its value wins and
+    the substitute stops being touched — no date cutoff to maintain by hand.
+    """
     if cache_dir is None:
         return None
     path = cache_dir / "dwd_weather.csv"
@@ -110,7 +117,20 @@ def load_dwd_weather(cache_dir: Path | None = None) -> pd.DataFrame | None:
     df = df[["date", "tmax", "tmit", "tmin", "rain", "sunshine"]].dropna(subset=["date"])
     for col in ["tmax", "tmit", "tmin", "rain", "sunshine"]:
         df[col] = pd.to_numeric(df[col], errors="coerce")
-    return df.sort_values("date").set_index("date")
+    df = df.sort_values("date").set_index("date")
+
+    df["sunshine_is_substitute"] = False
+    city_path = cache_dir / "lmu_city_weather.csv"
+    if city_path.exists():
+        city = pd.read_csv(city_path, parse_dates=["date"])
+        city["sunshine"] = pd.to_numeric(city["sunshine"], errors="coerce")
+        city_sunshine = city.dropna(subset=["date"]).set_index("date")["sunshine"]
+        gap = df["sunshine"].isna()
+        fill = city_sunshine.reindex(df.index)
+        df.loc[gap, "sunshine_is_substitute"] = fill[gap].notna()
+        df["sunshine"] = df["sunshine"].fillna(fill)
+
+    return df
 
 
 def load_weather_data(data_dir: Path, cache_dir: Path | None = None) -> pd.DataFrame:

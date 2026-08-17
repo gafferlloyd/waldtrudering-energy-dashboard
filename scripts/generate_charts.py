@@ -527,11 +527,31 @@ def chart_weather(daily: pd.DataFrame, weather_dwd: pd.DataFrame | None = None) 
                                  line=dict(color=clr), showlegend=True), row=2, col=1)
         fig.add_hline(y=refs[rk], line_color=clr, **REF_STYLE, row=2, col=1)
 
-    # Sunshine sensor outage placeholder: if raw sunshine data has a sustained gap
-    # at the end, draw a flat dotted segment at the "same as last year" rolling value.
+    # Sunshine sensor outage: DWD's own sensor (SDK) can go dark for a stretch.
+    # process.py backfills those dates from LMU Munich-city so the main line
+    # above already flows through the gap with real (if not airport-native)
+    # data. Overlay a dashed segment across exactly the backfilled dates so
+    # it's clear which stretch isn't the airport's own sensor — self-healing:
+    # once DWD sunshine resumes, sunshine_is_substitute goes false and this
+    # overlay simply stops appearing for those dates.
     sun_raw  = w["sunshine"].dropna()
     sun_roll = (roll(w["sunshine"]) * movar).dropna()
-    if len(sun_raw) > 0 and len(sun_roll) > 0:
+    has_substitute = "sunshine_is_substitute" in w.columns and w["sunshine_is_substitute"].any()
+    if has_substitute:
+        sub_dates = w.index[w["sunshine_is_substitute"]]
+        sub_roll = sun_roll.loc[sun_roll.index.intersection(sub_dates)]
+        if len(sub_roll):
+            fig.add_trace(go.Scatter(
+                x=sub_roll.index, y=sub_roll.values,
+                name="Sunshine (LMU city, DWD sensor down)",
+                mode="lines",
+                line=dict(color="#CCB974", dash="dash", width=1.5),
+                opacity=0.6,
+                showlegend=True,
+            ), row=2, col=1)
+    elif len(sun_raw) > 0 and len(sun_roll) > 0:
+        # Deeper fallback: no city backfill available either (e.g. cache not
+        # yet fetched) — flat "same as last year" guess, same as before.
         last_raw_date = sun_raw.index[-1]
         data_end      = w.index[-1]
         if data_end - last_raw_date > pd.Timedelta(days=14):

@@ -48,6 +48,10 @@ def main():
         import fetch_dwd_weather
         fetch_dwd_weather.fetch(cache_dir)
 
+        print("Step 1d: Fetching LMU Munich-city sunshine backfill…")
+        import fetch_lmu_sunshine
+        fetch_lmu_sunshine.fetch(cache_dir)
+
     # ── 2. Process ────────────────────────────────────────────────────────────
     print("Step 2: Processing data…")
     import process

@@ -14,6 +14,10 @@ import urllib.request
 from pathlib import Path
 
 BASE_URL = "https://www.meteo.physik.uni-muenchen.de/~quicklooks/klimadaten/garching"
+STATIONS = {
+    "garching": "https://www.meteo.physik.uni-muenchen.de/~quicklooks/klimadaten/garching",
+    "stadt":    "https://www.meteo.physik.uni-muenchen.de/~quicklooks/klimadaten/stadt",
+}
 
 
 class _TableParser(HTMLParser):
@@ -50,10 +54,10 @@ class _TableParser(HTMLParser):
             self._cell += data
 
 
-def _fetch_month(year: int, month: int) -> list[dict]:
+def _fetch_month(year: int, month: int, base_url: str = BASE_URL) -> list[dict]:
     mm = f"{month:02d}"
     yyyy = str(year)
-    url = f"{BASE_URL}/{yyyy}/{mm}{yyyy}_h.html"
+    url = f"{base_url}/{yyyy}/{mm}{yyyy}_h.html"
 
     try:
         with urllib.request.urlopen(url, timeout=15) as resp:
@@ -72,6 +76,7 @@ def _fetch_month(year: int, month: int) -> list[dict]:
             continue
         try:
             day, mon, yr = row[0].split(".")
+            yr = yr.rstrip("*")  # LMU marks some days with a footnote asterisk
             records.append({
                 "date":     f"{yr}-{mon}-{day}",
                 "tmax":     row[1],   # T_max
@@ -85,8 +90,10 @@ def _fetch_month(year: int, month: int) -> list[dict]:
     return records
 
 
-def scrape(from_ym: str = "2015-09", to_ym: str | None = None) -> list[dict]:
+def scrape(from_ym: str = "2015-09", to_ym: str | None = None,
+           station: str = "garching") -> list[dict]:
     """Return all daily rows from *from_ym* through *to_ym* (inclusive, YYYY-MM)."""
+    base_url = STATIONS[station]
     start = datetime.strptime(from_ym, "%Y-%m").date()
     end = (datetime.strptime(to_ym, "%Y-%m").date()
            if to_ym else date.today().replace(day=1))
@@ -95,7 +102,7 @@ def scrape(from_ym: str = "2015-09", to_ym: str | None = None) -> list[dict]:
     current = start
     while current <= end:
         print(f"  {current.year}-{current.month:02d} … ", file=sys.stderr, end="", flush=True)
-        rows = _fetch_month(current.year, current.month)
+        rows = _fetch_month(current.year, current.month, base_url)
         all_rows.extend(rows)
         print(f"{len(rows)} rows", file=sys.stderr)
         current = (current.replace(year=current.year + 1, month=1)
@@ -114,9 +121,11 @@ def main():
                     metavar="YYYY-MM", help="Last month to fetch (default: current month)")
     ap.add_argument("-o", "--output", default=None,
                     help="Output CSV file path (default: stdout)")
+    ap.add_argument("--station", default="garching", choices=sorted(STATIONS),
+                    help="LMU station to scrape (default: garching)")
     args = ap.parse_args()
 
-    rows = scrape(args.from_ym, args.to_ym)
+    rows = scrape(args.from_ym, args.to_ym, args.station)
 
     out = open(args.output, "w", newline="") if args.output else sys.stdout
     try:
