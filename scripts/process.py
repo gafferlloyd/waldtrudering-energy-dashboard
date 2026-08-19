@@ -196,6 +196,11 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None,
     gas_prices  = cfg["gas_prices"]
     elec_prices = cfg["elec_prices"]
     floor_area = cfg["floor_area_m2"]
+    pv_kwp = cfg["pv_kwp"]
+    pv_performance_ratio = cfg["pv_performance_ratio"]
+    pv_latitude_deg = cfg["pv_latitude_deg"]
+    pv_angstrom_as = cfg["pv_angstrom_as"]
+    pv_angstrom_bs = cfg["pv_angstrom_bs"]
 
     if goodwe_db_path is None:
         goodwe_db_path = Path(cfg.get("goodwe_db_path", "/home/gareth/goodwe_solar/data.db"))
@@ -261,6 +266,29 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None,
     # Degree days
     dd = np.maximum(0.0, base_temp - daily["tmit"])
     daily["degree_days"] = np.where(dd > 0, dd + dd_offset, 0.0)
+
+    # Theoretical PV output: FAO-56 Angström-Prescott solar-radiation-from-
+    # sunshine-hours model (Allen et al. 1998, ch. 3), applied to the site's
+    # 10.52 kWp array. Deliberately uses horizontal-surface radiation rather
+    # than a tilted plane-of-array transposition -- self-contained (no import
+    # of goodwe_solar's own, more accurate but only ~7-week-deep irradiance
+    # model) at the cost of not modelling the 40°-tilt/SE-azimuth seasonal
+    # skew explicitly; that skew is absorbed into pv_performance_ratio as a
+    # single scalar instead of a proper POA transposition.
+    lat_rad = np.radians(pv_latitude_deg)
+    doy = daily.index.dayofyear.values.astype(float)
+    dr = 1 + 0.033 * np.cos(2 * np.pi * doy / 365)
+    decl = 0.409 * np.sin(2 * np.pi * doy / 365 - 1.39)
+    sunset_angle = np.arccos(np.clip(-np.tan(lat_rad) * np.tan(decl), -1.0, 1.0))
+    max_daylight_hours = (24 / np.pi) * sunset_angle
+    Gsc = 0.0820  # MJ m-2 min-1, solar constant
+    Ra = ((24 * 60 / np.pi) * Gsc * dr *
+          (sunset_angle * np.sin(lat_rad) * np.sin(decl)
+           + np.cos(lat_rad) * np.cos(decl) * np.sin(sunset_angle)))
+    sunshine_fraction = np.clip(daily["sunshine"].values / max_daylight_hours, 0.0, 1.0)
+    Rs = (pv_angstrom_as + pv_angstrom_bs * sunshine_fraction) * Ra  # MJ/m2/day
+    Rs_kwh_m2 = Rs / 3.6
+    daily["pv_theoretical_kwh"] = Rs_kwh_m2 * pv_kwp * pv_performance_ratio
 
     # Hot-water baseline: segmented (hinge) regression of gas vs tmin.
     # gas(tmin) = baseline for tmin >= T*, baseline + slope*(T* - tmin) below T*.
@@ -450,3 +478,10 @@ if __name__ == "__main__":
     print(f"Daily rows: {len(daily)}, {daily.index[0].date()} to {daily.index[-1].date()}")
     print(f"Hot-water baseline: {result['hot_water_kwh']:.1f} kWh/day")
     print(daily[["use_gas_kwh","use_elec_kwh","degree_days","cost_total_annual"]].tail(5))
+
+    overlap = daily.dropna(subset=["pv_energy_total_kwh", "pv_theoretical_kwh"])
+    if len(overlap) > 5:
+        ratio = overlap["pv_energy_total_kwh"].sum() / overlap["pv_theoretical_kwh"].sum()
+        cfg = result["config"]
+        print(f"PV calibration ratio (actual/theoretical, {len(overlap)} days): {ratio:.2f} "
+              f"(current pv_performance_ratio={cfg['pv_performance_ratio']})")

@@ -248,7 +248,7 @@
 
   // ── Time-range buttons ────────────────────────────────────────────────────
   const DATE_CHART_IDS = [
-    'chart_gas', 'chart_elec', 'chart_water',
+    'chart_gas', 'chart_elec', 'chart_water', 'chart_pv_system',
     'chart_efficiency', 'chart_eff_trend', 'chart_cost'
   ];
   const LAST_DATE_ISO = '{{ stats.last_date_iso }}';
@@ -280,7 +280,7 @@
 
   // ── i18n ──────────────────────────────────────────────────────────────────
   const CHART_IDS = [
-    'chart_gas','chart_elec','chart_water','chart_efficiency',
+    'chart_gas','chart_elec','chart_water','chart_pv_system','chart_efficiency',
     'chart_gas_temp','chart_doy','chart_cum_gas','chart_cum_dd',
     'chart_eff_trend','chart_cost','chart_gdd','chart_weather'
   ];
@@ -305,6 +305,7 @@
       chart_gas:        "Gas Use",
       chart_elec:       "Electricity Use",
       chart_water:      "Water Use",
+      chart_pv_system:  "PV System",
       chart_efficiency: "Energy Efficiency (rolling)",
       chart_gas_temp:   "Gas Use vs. Min Temperature",
       chart_doy:        "Gas Use by Day-of-Year",
@@ -334,6 +335,7 @@
       chart_gas:        "Gasverbrauch",
       chart_elec:       "Stromverbrauch",
       chart_water:      "Wasserverbrauch",
+      chart_pv_system:  "PV-Anlage",
       chart_efficiency: "Energieeffizienz (gleitend)",
       chart_gas_temp:   "Gas vs. Mindesttemperatur",
       chart_doy:        "Gasverbrauch nach Jahrestag",
@@ -363,6 +365,7 @@
       chart_gas:        "Consumo Gas",
       chart_elec:       "Consumo Elettricità",
       chart_water:      "Consumo Acqua",
+      chart_pv_system:  "Impianto Fotovoltaico",
       chart_efficiency: "Efficienza Energetica (media mobile)",
       chart_gas_temp:   "Gas vs. Temperatura Minima",
       chart_doy:        "Consumo Gas per Giorno dell'Anno",

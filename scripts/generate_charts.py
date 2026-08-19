@@ -247,6 +247,24 @@ def chart_water(daily: pd.DataFrame) -> go.Figure:
     return fig
 
 
+def chart_pv_system(daily: pd.DataFrame) -> go.Figure:
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=daily.index, y=daily["pv_theoretical_kwh"],
+                             name="Theoretical PV", line=dict(color=_PALETTE[7], width=1, dash="dot")))
+    fig.add_trace(go.Scatter(x=daily.index, y=daily["pv_energy_total_kwh"],
+                             name="Actual PV", line=dict(color=_PALETTE[2], width=1.5)))
+    fig.add_trace(go.Scatter(x=daily.index, y=daily["grid_export_total_kwh"],
+                             name="Export to Grid", line=dict(color=_PALETTE[0], width=1.5)))
+    fig.add_trace(go.Scatter(x=daily.index, y=daily["acthor_energy_kwh"],
+                             name="Hot Water (AC-Thor)", line=dict(color=_PALETTE[3], width=1.5)))
+    fig.update_layout(
+        title="PV System (Daily)",
+        xaxis_title="Date",
+        yaxis=dict(title="kWh / day", range=[0, 80]),
+    )
+    return fig
+
+
 def chart_gas_vs_temp(daily: pd.DataFrame, hot_water_kwh: float,
                        heating_balance_temp_c: float | None = None,
                        heating_slope_kwh_per_c: float | None = None) -> go.Figure:
@@ -646,6 +664,7 @@ def build_all(data: dict) -> list[dict]:
         ("Gas Use",                 "chart_gas",      chart_gas(daily)),
         ("Electricity Use",         "chart_elec",     chart_electricity(daily)),
         ("Water Use",               "chart_water",    chart_water(daily)),
+        ("PV System",               "chart_pv_system", chart_pv_system(daily)),
         ("Heating Efficiency",      "chart_efficiency", chart_efficiency(daily)),
         ("Gas vs Temperature",      "chart_gas_temp", chart_gas_vs_temp(daily, hot_water, heating_balance_temp_c, heating_slope_kwh_per_c)),
         ("Gas by Day-of-Year",      "chart_doy",      chart_gas_day_of_year(daily, median_doy, recent_doy)),

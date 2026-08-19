@@ -6,6 +6,19 @@ gas_calorific_kwh_per_m3: 11.266
 goodwe_db_path: "/home/gareth/goodwe_solar/data.db"   # cross-project read-only source for
     # daily_rollup (AC-Thor/PV/battery) — see goodwe_solar/daily_rollup.py
 
+# PV system specs (AIKO A480-MCE54Db x23, installed 2026-06-22) — used only to
+# derive the "theoretical PV" chart proxy from historical sunshine-hours data.
+# goodwe_solar's own irradiance model is the authoritative real-time source; this
+# is a self-contained, long-history complement (FAO-56 Angström-Prescott).
+pv_kwp: 10.52
+pv_performance_ratio: 0.80   # lumps inverter/temp/soiling/wiring losses AND the
+    # horizontal-vs-40°-tilt irradiance difference into one factor; revisit once
+    # more real pv_energy_total_kwh history accumulates (see calibration print
+    # in process.py's __main__ block)
+pv_latitude_deg: 48.1157     # site latitude — matches goodwe_solar/solar_position.py
+pv_angstrom_as: 0.25         # FAO-56 default Angström-Prescott regression
+pv_angstrom_bs: 0.50         # constants (no local calibration station)
+
 # Google Sheet CSV export URLs
 # Current meter readings (from 2026-07-07, new electricity meter starting at 0)
 # Columns: date, date_num, elec_import, elec_export, gas, water
