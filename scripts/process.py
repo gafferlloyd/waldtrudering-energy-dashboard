@@ -180,6 +180,19 @@ def load_goodwe_rollup(db_path: Path) -> pd.DataFrame:
         return pd.DataFrame(columns=GOODWE_ROLLUP_COLS)
 
 
+def load_goodwe_snapshot(data_dir: Path) -> pd.DataFrame:
+    """Read the committed CSV fallback of goodwe_solar's daily_rollup (see
+    scripts/export_goodwe_snapshot.py). Used only when the live SQLite DB
+    isn't reachable — e.g. GitHub Actions CI, which has no access to the
+    local-only goodwe_solar/data.db. Refreshed daily by the local systemd
+    build (daily_update.sh), so it's at most one day stale."""
+    path = data_dir / "goodwe_rollup_snapshot.csv"
+    if not path.exists():
+        return pd.DataFrame(columns=GOODWE_ROLLUP_COLS)
+    df = pd.read_csv(path, parse_dates=["date"])
+    return df.set_index("date")
+
+
 # ── Main pipeline ─────────────────────────────────────────────────────────────
 
 def run(data_dir: Path | None = None, cache_dir: Path | None = None,
@@ -255,8 +268,13 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None,
         daily[col] = w[col].iloc[1:].values
 
     # Join goodwe_solar's daily rollup (AC-Thor/PV/battery) — left join on date;
-    # NaN before 2026-06-22 PV install is correct (nothing existed yet).
+    # NaN before 2026-06-22 PV install is correct (nothing existed yet). Prefer
+    # the live DB (freshest, local-machine builds only); fall back to the
+    # committed CSV snapshot when it's unreachable (GitHub Actions CI has no
+    # access to the local-only SQLite file).
     goodwe = load_goodwe_rollup(goodwe_db_path)
+    if goodwe.empty:
+        goodwe = load_goodwe_snapshot(data_dir)
     daily = daily.join(goodwe)
 
     # Sanity-clip negative consumption / export
