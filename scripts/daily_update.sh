@@ -33,23 +33,4 @@ else
     echo "WARNING: service restart failed"
 fi
 
-# Export a fresh goodwe_solar snapshot and push it, so GitHub Actions CI (which
-# can't reach the local-only goodwe_solar/data.db) has a same-day fallback for
-# actual PV/export/hot-water data. See scripts/export_goodwe_snapshot.py.
-if /usr/bin/python3 scripts/export_goodwe_snapshot.py; then
-    echo "Snapshot export: ok"
-    if ! git diff --quiet -- data/goodwe_rollup_snapshot.csv; then
-        git add data/goodwe_rollup_snapshot.csv
-        if git commit -m "Update goodwe rollup snapshot" 2>&1 && git push 2>&1; then
-            echo "Snapshot commit+push: ok"
-        else
-            echo "WARNING: snapshot commit/push failed — continuing"
-        fi
-    else
-        echo "Snapshot unchanged — nothing to commit"
-    fi
-else
-    echo "WARNING: snapshot export failed — continuing"
-fi
-
 echo "=== Done ==="
