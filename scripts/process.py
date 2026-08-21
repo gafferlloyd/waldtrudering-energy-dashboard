@@ -180,6 +180,70 @@ def load_goodwe_rollup(db_path: Path) -> pd.DataFrame:
         return pd.DataFrame(columns=GOODWE_ROLLUP_COLS)
 
 
+def _reconcile_cumulative_with_daily(cumulative: pd.Series, daily_delta: pd.Series) -> pd.Series:
+    """Fill gaps in a cumulative meter reading using an independent measured
+    daily-delta series (here: goodwe's daily import/export), instead of flat
+    linear interpolation.
+
+    For a *closed* gap (a real manual reading exists on both sides -- the
+    normal case, e.g. a skipped day or two), goodwe's day-to-day shape is
+    scaled so the reconstructed days sum EXACTLY to the true observed delta
+    between the two real readings. This is what avoids a reconciliation-day
+    spike: the whole gap is rebuilt from scratch, so the small systematic
+    offset between the utility meter and the inverter's own measurement
+    (calibration, rounding) gets spread proportionally across the gap
+    instead of landing entirely on one day's diff.
+
+    For a still-*open* gap (the current holiday case: away from home, no
+    next reading yet), goodwe's raw daily deltas are used unscaled as the
+    best available live estimate -- plain interpolation can't do this at
+    all (nothing to interpolate toward), and today it silently flat-lines
+    the reading instead (0 apparent usage while away), which is what
+    causes the later reconciliation-day spike in the first place. This
+    open-gap estimate is provisional by construction: next time this
+    pipeline runs after a real reading lands, that gap is "closed" and
+    gets rebuilt with the exact scaling above -- no extra state needed,
+    since everything here is recomputed fresh from raw data each build.
+
+    Falls back to leaving the gap for the caller's own linear interpolation
+    wherever goodwe data itself has any missing day within the gap (e.g.
+    entirely before the PV install, or a goodwe outage day) -- or, for a
+    closed gap, wherever goodwe's shape has (near-)zero total (e.g. a fully
+    self-sufficient stretch with ~0 grid import all gap): there's no usable
+    shape signal to scale by there, and dividing by ~0 would blow the scale
+    factor up and dump the whole true delta onto one day again -- exactly
+    the bug this function exists to avoid. Plain linear interpolation is the
+    safer, simpler answer when goodwe has nothing to distribute against.
+    """
+    result = cumulative.copy()
+    known_dates = cumulative.dropna().index.to_list()
+
+    for i, anchor_date in enumerate(known_dates):
+        anchor_value = cumulative[anchor_date]
+        close_date = known_dates[i + 1] if i + 1 < len(known_dates) else None
+        gap_end = close_date if close_date is not None else cumulative.index[-1]
+        gap_days = cumulative.loc[anchor_date:gap_end].index[1:]
+        if len(gap_days) == 0:
+            continue
+        gap_delta = daily_delta.reindex(gap_days)
+        if gap_delta.isna().any():
+            continue  # incomplete goodwe coverage for this gap -- leave for interpolate()
+
+        cum = gap_delta.cumsum()
+        if close_date is not None:
+            true_total = cumulative[close_date] - anchor_value
+            goodwe_total = cum.iloc[-1]
+            if abs(goodwe_total) < 0.5:
+                continue  # no usable shape signal -- leave for interpolate()
+            scale = true_total / goodwe_total
+            estimate = (anchor_value + cum * scale).iloc[:-1]  # don't overwrite the real close_date reading
+        else:
+            estimate = anchor_value + cum  # open gap: unscaled, provisional
+        result.loc[estimate.index] = estimate.values
+
+    return result
+
+
 def load_goodwe_snapshot(data_dir: Path) -> pd.DataFrame:
     """Read the committed CSV fallback of goodwe_solar's daily_rollup (see
     scripts/export_goodwe_snapshot.py). Used only when the live SQLite DB
@@ -237,21 +301,48 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None,
     for col in ["tmax", "tmit", "tmin", "rain", "sunshine"]:
         w[col] = w[col].interpolate(method="index", limit=7, limit_area="inside")
 
-    # Reindex meter readings and interpolate
+    # Load goodwe_solar's daily rollup early (needed below, to reconcile meter
+    # gaps) -- prefer the live DB, fall back to the committed CSV snapshot when
+    # it's unreachable (see load_goodwe_rollup()/load_goodwe_snapshot()).
+    goodwe = load_goodwe_rollup(goodwe_db_path)
+    if goodwe.empty:
+        goodwe = load_goodwe_snapshot(data_dir)
+    goodwe_r = goodwe.reindex(date_range)
+
+    # Reindex meter readings and interpolate (elec handled separately below,
+    # via goodwe reconciliation)
     m = meter.reindex(date_range)
-    for col in ["elec", "gas", "water"]:
+    for col in ["gas", "water"]:
         m[col] = m[col].interpolate(method="index")
-    # Export meter: interpolate interior gaps (e.g. a skipped manual reading day)
-    # same as gas/elec/water, THEN fill any remaining (leading) NaN with 0 -- that
-    # only covers genuinely pre-solar dates, before the export register existed.
-    # Filling gaps with 0 directly (previous behaviour) fabricated a phantom zero
-    # cumulative reading on any skipped day, corrupting the *next* day's diff into
-    # a huge fake spike (e.g. reported 306 kWh in one day -- verified 2026-07-18:
-    # sheet rows exist for 07-14/16/18 but not 07-15/17, a routine every-other-day
-    # gap, not an error -- the ~31 kWh real 2-day export delta got all attributed
-    # to a single day instead of split evenly across the gap).
+    # elec/elec_export: before falling back to *flat* linear interpolation,
+    # reconstruct gaps using goodwe's own measured daily import/export where
+    # available -- both because it reflects real day-to-day variation instead
+    # of a flat rate, and because it's the only way to estimate a still-open
+    # gap (on holiday, no next reading yet) at all; plain interpolation can't
+    # extrapolate past the last known reading and silently flat-lines it
+    # instead (0 apparent usage while away), which is what used to cause a
+    # phantom spike/dip on the day the next real reading lands. See
+    # _reconcile_cumulative_with_daily() for how the reconciliation-day error
+    # is avoided once that next reading arrives.
+    elec_raw = meter["elec"].reindex(date_range)
+    m["elec"] = _reconcile_cumulative_with_daily(elec_raw, goodwe_r["grid_import_total_kwh"]).interpolate(method="index")
+
+    # Export meter: same reconciliation, then interpolate any still-missing
+    # interior gaps (pre-goodwe-coverage), THEN fill any remaining (leading)
+    # NaN with 0 -- that only covers genuinely pre-solar dates, before the
+    # export register existed. Filling gaps with 0 directly (previous
+    # behaviour, still needed here for the leading case) fabricated a phantom
+    # zero cumulative reading on any skipped day, corrupting the *next* day's
+    # diff into a huge fake spike (e.g. reported 306 kWh in one day --
+    # verified 2026-07-18: sheet rows exist for 07-14/16/18 but not 07-15/17,
+    # a routine every-other-day gap, not an error -- the ~31 kWh real 2-day
+    # export delta got all attributed to a single day instead of split evenly
+    # across the gap).
     if "elec_export" in meter.columns:
-        m["elec_export"] = meter["elec_export"].reindex(date_range).interpolate(method="index").fillna(0)
+        export_raw = meter["elec_export"].reindex(date_range)
+        m["elec_export"] = _reconcile_cumulative_with_daily(
+            export_raw, goodwe_r["grid_export_total_kwh"]
+        ).interpolate(method="index").fillna(0)
     else:
         m["elec_export"] = 0.0
 
@@ -268,13 +359,8 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None,
         daily[col] = w[col].iloc[1:].values
 
     # Join goodwe_solar's daily rollup (AC-Thor/PV/battery) — left join on date;
-    # NaN before 2026-06-22 PV install is correct (nothing existed yet). Prefer
-    # the live DB (freshest, local-machine builds only); fall back to the
-    # committed CSV snapshot when it's unreachable (GitHub Actions CI has no
-    # access to the local-only SQLite file).
-    goodwe = load_goodwe_rollup(goodwe_db_path)
-    if goodwe.empty:
-        goodwe = load_goodwe_snapshot(data_dir)
+    # NaN before 2026-06-22 PV install is correct (nothing existed yet).
+    # (Already loaded above as `goodwe`, to reconcile meter gaps.)
     daily = daily.join(goodwe)
 
     # Sanity-clip negative consumption / export
