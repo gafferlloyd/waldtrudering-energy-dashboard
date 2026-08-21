@@ -452,6 +452,8 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None,
     # Day-of-year median pattern for "all years except last 3"
     median_gas_doy = _compute_doy_median(daily["use_gas_kwh"], exclude_last_n=3)
     recent_gas_doy = _compute_doy_recent(daily["use_gas_kwh"], n=3)
+    median_elec_doy = _compute_doy_median(daily["use_elec_kwh"], exclude_last_n=3)
+    recent_elec_doy = _compute_doy_recent(daily["use_elec_kwh"], n=3)
 
     # Metre readings (cumulative) for raw scatter
     meter_raw = meter.copy()
@@ -464,6 +466,8 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None,
         "year_groups":      year_groups,
         "median_gas_doy":   median_gas_doy,
         "recent_gas_doy":   recent_gas_doy,
+        "median_elec_doy":  median_elec_doy,
+        "recent_elec_doy":  recent_elec_doy,
         "config":           cfg,
         "meter_raw":        meter_raw,
         "weather_dwd":      weather_dwd,

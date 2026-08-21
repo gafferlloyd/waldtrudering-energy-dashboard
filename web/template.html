@@ -281,7 +281,7 @@
   // ── i18n ──────────────────────────────────────────────────────────────────
   const CHART_IDS = [
     'chart_gas','chart_elec','chart_water','chart_pv_system','chart_efficiency',
-    'chart_gas_temp','chart_doy','chart_cum_gas','chart_cum_dd',
+    'chart_gas_temp','chart_doy','chart_elec_doy','chart_cum_gas','chart_cum_dd',
     'chart_eff_trend','chart_cost','chart_gdd','chart_weather'
   ];
 
@@ -309,6 +309,7 @@
       chart_efficiency: "Energy Efficiency (rolling)",
       chart_gas_temp:   "Gas Use vs. Min Temperature",
       chart_doy:        "Gas Use by Day-of-Year",
+      chart_elec_doy:   "Electricity Use by Day-of-Year",
       chart_cum_gas:    "Cumulative Gas Use by Heating Year (Jul → Jun)",
       chart_cum_dd:     "Cumulative Heating Degree Days by Heating Year (Jul → Jun)",
       chart_eff_trend:  "Heating Efficiency Development (kWh gas per degree-day)",
@@ -339,6 +340,7 @@
       chart_efficiency: "Energieeffizienz (gleitend)",
       chart_gas_temp:   "Gas vs. Mindesttemperatur",
       chart_doy:        "Gasverbrauch nach Jahrestag",
+      chart_elec_doy:   "Stromverbrauch nach Jahrestag",
       chart_cum_gas:    "Kumulativer Gasverbrauch nach Heizsaison (Jul → Jun)",
       chart_cum_dd:     "Kumulierte Heizgradtage nach Heizsaison (Jul → Jun)",
       chart_eff_trend:  "Entwicklung der Heizeffizienz (kWh Gas je Gradtag)",
@@ -369,6 +371,7 @@
       chart_efficiency: "Efficienza Energetica (media mobile)",
       chart_gas_temp:   "Gas vs. Temperatura Minima",
       chart_doy:        "Consumo Gas per Giorno dell'Anno",
+      chart_elec_doy:   "Consumo Elettricità per Giorno dell'Anno",
       chart_cum_gas:    "Gas Cumulativo per Anno di Riscaldamento (Lug → Giu)",
       chart_cum_dd:     "Gradi-Giorno Cumulativi per Anno di Riscaldamento (Lug → Giu)",
       chart_eff_trend:  "Sviluppo Efficienza Riscaldamento (kWh gas per grado-giorno)",

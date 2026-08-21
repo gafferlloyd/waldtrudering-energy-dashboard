@@ -308,15 +308,15 @@ def chart_gas_vs_temp(daily: pd.DataFrame, hot_water_kwh: float,
     return fig
 
 
-def chart_gas_day_of_year(daily: pd.DataFrame,
-                           median_doy: pd.Series,
-                           recent_doy: pd.Series) -> go.Figure:
+def _chart_day_of_year(daily: pd.DataFrame, col: str,
+                        median_doy: pd.Series, recent_doy: pd.Series,
+                        title: str, yaxis_title: str, yaxis_max: float) -> go.Figure:
     fig = go.Figure()
 
     # All historical data as dots, shifted so July=0
     x_all = _shift_doy(daily.index.dayofyear)
     fig.add_trace(go.Scatter(
-        x=x_all, y=daily["use_gas_kwh"].values,
+        x=x_all, y=daily[col].values,
         mode="markers", name="All days",
         marker=dict(color=_PALETTE[8], size=2, opacity=0.25)))
 
@@ -347,16 +347,30 @@ def chart_gas_day_of_year(daily: pd.DataFrame,
     curr = daily[daily.index >= hy_start]
     hy_label = f"{hy_start_yr}/{str(hy_start_yr + 1)[-2:]}"
     fig.add_trace(go.Scatter(
-        x=_shift_doy(curr.index.dayofyear), y=curr["use_gas_kwh"].values,
+        x=_shift_doy(curr.index.dayofyear), y=curr[col].values,
         mode="lines", name=hy_label,
         line=dict(color=_PALETTE[2], width=1.5)))
 
     fig.update_layout(
-        title="Gas Use by Day-of-Year",
+        title=title,
         xaxis=dict(range=[0, 364], tickvals=_MONTH_TICKVALS, ticktext=_MONTH_TICKTEXT),
-        yaxis=dict(title="Gas Use (kWh/day)", range=[0, 200]),
+        yaxis=dict(title=yaxis_title, range=[0, yaxis_max]),
     )
     return fig
+
+
+def chart_gas_day_of_year(daily: pd.DataFrame,
+                           median_doy: pd.Series,
+                           recent_doy: pd.Series) -> go.Figure:
+    return _chart_day_of_year(daily, "use_gas_kwh", median_doy, recent_doy,
+                               "Gas Use by Day-of-Year", "Gas Use (kWh/day)", 200)
+
+
+def chart_elec_day_of_year(daily: pd.DataFrame,
+                            median_doy: pd.Series,
+                            recent_doy: pd.Series) -> go.Figure:
+    return _chart_day_of_year(daily, "use_elec_kwh", median_doy, recent_doy,
+                               "Electricity Use by Day-of-Year", "Electricity Use (kWh/day)", 40)
 
 
 def _heating_year_xaxis():
@@ -659,6 +673,8 @@ def build_all(data: dict) -> list[dict]:
     year_groups = data["year_groups"]
     median_doy  = data["median_gas_doy"]
     recent_doy  = data["recent_gas_doy"]
+    median_elec_doy = data["median_elec_doy"]
+    recent_elec_doy = data["recent_elec_doy"]
     weather_dwd = data.get("weather_dwd")
     charts = [
         ("Gas Use",                 "chart_gas",      chart_gas(daily)),
@@ -668,6 +684,7 @@ def build_all(data: dict) -> list[dict]:
         ("Heating Efficiency",      "chart_efficiency", chart_efficiency(daily)),
         ("Gas vs Temperature",      "chart_gas_temp", chart_gas_vs_temp(daily, hot_water, heating_balance_temp_c, heating_slope_kwh_per_c)),
         ("Gas by Day-of-Year",      "chart_doy",      chart_gas_day_of_year(daily, median_doy, recent_doy)),
+        ("Electricity Use by Day-of-Year", "chart_elec_doy", chart_elec_day_of_year(daily, median_elec_doy, recent_elec_doy)),
         ("Cumulative Gas by Year",  "chart_cum_gas",  chart_cumulative_gas_by_year(daily, year_groups)),
         ("Cumulative Degree Days",  "chart_cum_dd",   chart_cumulative_degree_days(daily, year_groups)),
         ("Efficiency Development",  "chart_eff_trend",chart_efficiency_trend(daily)),
