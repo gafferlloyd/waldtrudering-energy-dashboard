@@ -162,7 +162,7 @@
   </div>
   <div class="stat">
     <span class="stat-label" data-i18n="gas_annual_label">Gas — annual</span>
-    <span class="stat-value">{{ stats.gas_annual_mwh }}</span>
+    <span class="stat-value">{{ "%.3f"|format(stats.gas_annual_mwh) }}</span>
     <span class="stat-unit" data-i18n="mwh_year">MWh / year</span>
     {{ trend_arrow(stats.gas_annual_trend) }}
   </div>
@@ -174,7 +174,7 @@
   </div>
   <div class="stat">
     <span class="stat-label" data-i18n="elec_annual_label">Electricity — annual</span>
-    <span class="stat-value">{{ stats.elec_annual_mwh }}</span>
+    <span class="stat-value">{{ "%.3f"|format(stats.elec_annual_mwh) }}</span>
     <span class="stat-unit" data-i18n="mwh_year">MWh / year</span>
     {{ trend_arrow(stats.elec_annual_trend) }}
   </div>
