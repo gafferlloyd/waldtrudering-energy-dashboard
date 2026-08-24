@@ -138,8 +138,8 @@ def main():
         "water_daily_m3":    round(last_nonzero("use_water_m3"), 3),
         "water_daily7_m3":   round(avg7("use_water_m3"), 3),
         # Annual (rolling 365-day)
-        "gas_annual_mwh":    round(annual("gas_annual_kwh") / 1000, 1),
-        "elec_annual_mwh":   round(annual("elec_annual_kwh") / 1000, 1),
+        "gas_annual_mwh":    round(annual("gas_annual_kwh") / 1000, 3),
+        "elec_annual_mwh":   round(annual("elec_annual_kwh") / 1000, 3),
         "water_annual_m3":   round(daily["use_water_m3"].rolling(365, min_periods=180).sum().dropna().iloc[-1], 0)
                              if daily["use_water_m3"].rolling(365, min_periods=180).sum().dropna().any() else 0,
         "annual_cost_eur":   round(annual("cost_total_annual")),
