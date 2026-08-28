@@ -161,6 +161,16 @@ def main():
         "export_annual_trend":  trend_pct(annual_at("elec_export_annual_kwh"), annual_at("elec_export_annual_kwh", 365)),
     }
 
+    # PV "not captured" — confirmed export-cap clipping only (a floor, not a
+    # full accounting; see compute_pv_clipping_kwh's docstring). None if the
+    # goodwe DB/irradiance table wasn't reachable.
+    pv_clipping_kwh = data.get("pv_clipping_kwh")
+    pv_actual_total_kwh = daily["pv_energy_total_kwh"].dropna().sum()
+    if pv_clipping_kwh is not None and pv_actual_total_kwh > 0:
+        stats["pv_not_captured_pct"] = round(100 * pv_clipping_kwh / (pv_actual_total_kwh + pv_clipping_kwh), 1)
+    else:
+        stats["pv_not_captured_pct"] = None
+
     # ── 5. Render HTML ────────────────────────────────────────────────────────
     print("Step 4: Rendering HTML…")
     html = render_html(charts, stats)

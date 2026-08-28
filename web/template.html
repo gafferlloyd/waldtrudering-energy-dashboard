@@ -217,6 +217,13 @@
     <span class="stat-value">{{ stats.hot_water_kwh }}</span>
     <span class="stat-unit" data-i18n="kwh_day2">kWh / day</span>
   </div>
+  {% if stats.pv_not_captured_pct is not none %}
+  <div class="stat">
+    <span class="stat-label" data-i18n="pv_not_captured_label">PV Not Captured (min.)</span>
+    <span class="stat-value">{{ stats.pv_not_captured_pct }}%</span>
+    <span class="stat-unit" data-i18n="pv_not_captured_unit">confirmed clipping only</span>
+  </div>
+  {% endif %}
 </div>
 
 <div class="timerange-bar">
@@ -280,7 +287,8 @@
 
   // ── i18n ──────────────────────────────────────────────────────────────────
   const CHART_IDS = [
-    'chart_gas','chart_elec','chart_water','chart_pv_system','chart_efficiency',
+    'chart_gas','chart_elec','chart_water','chart_pv_system',
+    'chart_consumption_split','chart_pv_destination','chart_efficiency',
     'chart_gas_temp','chart_doy','chart_elec_doy','chart_cum_gas','chart_cum_dd',
     'chart_eff_trend','chart_cost','chart_gdd','chart_weather'
   ];
@@ -299,6 +307,7 @@
       solar_daily_label:  "Solar export — 7d avg",
       solar_annual_label: "Solar export — annual",
       cost_label: "Annual Cost", efficiency_label: "Efficiency 3yr (1yr)", hot_water_label: "Hot Water Baseline",
+      pv_not_captured_label: "PV Not Captured (min.)", pv_not_captured_unit: "confirmed clipping only",
       kwh_avg: "kWh avg", mwh_year: "MWh / year", m3_avg: "m³ avg", m3_year: "m³ / year",
       kwh_day: "kWh/day", kwh_year: "kWh / year", kwh_day2: "kWh / day",
       gas_elec: "gas + electricity", kwh_m2_year: "kWh / m² / year", vs_last_year: "vs last year",
@@ -306,6 +315,8 @@
       chart_elec:       "Electricity Use",
       chart_water:      "Water Use",
       chart_pv_system:  "PV System",
+      chart_consumption_split: "Household Electricity Source",
+      chart_pv_destination:    "PV Energy Destination",
       chart_efficiency: "Energy Efficiency (rolling)",
       chart_gas_temp:   "Gas Use vs. Min Temperature",
       chart_doy:        "Gas Use by Day-of-Year",
@@ -330,6 +341,7 @@
       solar_daily_label:  "Solareinspeisung — 7T-Ø",
       solar_annual_label: "Solareinspeisung — jährlich",
       cost_label: "Jahreskosten", efficiency_label: "Effizienz 3 Jahre (1 Jahr)", hot_water_label: "Warmwasserbedarf",
+      pv_not_captured_label: "PV nicht genutzt (min.)", pv_not_captured_unit: "nur bestätigtes Clipping",
       kwh_avg: "kWh Ø", mwh_year: "MWh / Jahr", m3_avg: "m³ Ø", m3_year: "m³ / Jahr",
       kwh_day: "kWh/Tag", kwh_year: "kWh / Jahr", kwh_day2: "kWh / Tag",
       gas_elec: "Gas + Strom", kwh_m2_year: "kWh / m² / Jahr", vs_last_year: "vs. Vorjahr",
@@ -337,6 +349,8 @@
       chart_elec:       "Stromverbrauch",
       chart_water:      "Wasserverbrauch",
       chart_pv_system:  "PV-Anlage",
+      chart_consumption_split: "Stromquelle Haushalt",
+      chart_pv_destination:    "PV-Energie Verwendung",
       chart_efficiency: "Energieeffizienz (gleitend)",
       chart_gas_temp:   "Gas vs. Mindesttemperatur",
       chart_doy:        "Gasverbrauch nach Jahrestag",
@@ -361,6 +375,7 @@
       solar_daily_label:  "Solare — media 7 giorni",
       solar_annual_label: "Solare — annuale",
       cost_label: "Costo annuale", efficiency_label: "Efficienza 3 anni (1 anno)", hot_water_label: "Base acqua calda",
+      pv_not_captured_label: "PV non catturato (min.)", pv_not_captured_unit: "solo clipping confermato",
       kwh_avg: "kWh media", mwh_year: "MWh / anno", m3_avg: "m³ media", m3_year: "m³ / anno",
       kwh_day: "kWh/giorno", kwh_year: "kWh / anno", kwh_day2: "kWh / giorno",
       gas_elec: "gas + elettricità", kwh_m2_year: "kWh / m² / anno", vs_last_year: "vs. anno scorso",
@@ -368,6 +383,8 @@
       chart_elec:       "Consumo Elettricità",
       chart_water:      "Consumo Acqua",
       chart_pv_system:  "Impianto Fotovoltaico",
+      chart_consumption_split: "Fonte Elettricità Domestica",
+      chart_pv_destination:    "Destinazione Energia PV",
       chart_efficiency: "Efficienza Energetica (media mobile)",
       chart_gas_temp:   "Gas vs. Temperatura Minima",
       chart_doy:        "Consumo Gas per Giorno dell'Anno",

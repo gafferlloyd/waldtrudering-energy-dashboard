@@ -180,6 +180,63 @@ def load_goodwe_rollup(db_path: Path) -> pd.DataFrame:
         return pd.DataFrame(columns=GOODWE_ROLLUP_COLS)
 
 
+def compute_pv_clipping_kwh(db_path: Path) -> float | None:
+    """Estimate PV export-cap clipping loss (kWh, cumulative over all history)
+    via sustained flat-plateau detection in goodwe_solar's irradiance_readings:
+    actual_pv_power_w pinned within a ~150W band for >=8 consecutive samples
+    while theoretical_power_w keeps climbing -- the exact signature confirmed
+    as real clipping (not cloud-shading, which varies continuously) in
+    [[project_pv_ratio_departures]] (2026-07-29, the 2026-07-16 09:53-11:29
+    episode). Restricted to elevation > 20deg to stay clear of that same
+    memory's documented dawn/dusk sensor-lag bias.
+
+    Deliberately NOT the naive actual/theoretical ratio over the whole day:
+    confirmed 2026-08-28 that ratio reads ~99.9% "captured" cumulative despite
+    known multi-hour/day clipping, because the dawn lead-bias (actual >>
+    theoretical right after sunrise) roughly cancels the real clipping loss in
+    a full-day sum -- not a trustworthy curtailment measure on its own. This
+    plateau-detection approach only counts a specific, verified loss
+    mechanism, so it's a floor on true "not captured," not a full accounting
+    (shorter or partial curtailment episodes below the detection threshold
+    aren't counted)."""
+    if not db_path.exists():
+        return None
+    try:
+        conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True, timeout=5)
+        rows = conn.execute(
+            "SELECT ts, theoretical_power_w, actual_pv_power_w FROM irradiance_readings "
+            "WHERE elevation_deg > 20 AND actual_pv_power_w > 3000 ORDER BY ts"
+        ).fetchall()
+        conn.close()
+    except sqlite3.Error:
+        return None
+    if len(rows) < 10:
+        return None
+
+    band_w, min_run, gap_s = 150, 8, 150
+    runs, cur = [], [rows[0]]
+    for r in rows[1:]:
+        prev = cur[-1]
+        if abs(r[2] - prev[2]) <= band_w and (r[0] - prev[0]) <= gap_s:
+            cur.append(r)
+        else:
+            if len(cur) >= min_run:
+                runs.append(cur)
+            cur = [r]
+    if len(cur) >= min_run:
+        runs.append(cur)
+
+    lost_wh = 0.0
+    for run in runs:
+        if (run[-1][1] - run[-1][2]) < 300:  # theoretical never pulled ahead -> not clipping
+            continue
+        for i in range(1, len(run)):
+            dt_h = (run[i][0] - run[i - 1][0]) / 3600
+            gap = ((run[i][1] - run[i][2]) + (run[i - 1][1] - run[i - 1][2])) / 2
+            lost_wh += max(gap, 0) * dt_h
+    return lost_wh / 1000
+
+
 def _reconcile_cumulative_with_daily(cumulative: pd.Series, daily_delta: pd.Series) -> pd.Series:
     """Fill gaps in a cumulative meter reading using an independent measured
     daily-delta series (here: goodwe's daily import/export), instead of flat
@@ -544,6 +601,8 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None,
     # Metre readings (cumulative) for raw scatter
     meter_raw = meter.copy()
 
+    pv_clipping_kwh = compute_pv_clipping_kwh(goodwe_db_path)
+
     return {
         "daily":            daily,
         "hot_water_kwh":    hot_water_kwh,
@@ -557,6 +616,7 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None,
         "config":           cfg,
         "meter_raw":        meter_raw,
         "weather_dwd":      weather_dwd,
+        "pv_clipping_kwh":  pv_clipping_kwh,
     }
 
 

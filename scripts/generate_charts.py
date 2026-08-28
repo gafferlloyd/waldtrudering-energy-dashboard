@@ -265,6 +265,104 @@ def chart_pv_system(daily: pd.DataFrame) -> go.Figure:
     return fig
 
 
+def chart_consumption_split(daily: pd.DataFrame) -> go.Figure:
+    """Household electricity consumption (excludes AC-Thor, same convention as
+    house_energy_kwh elsewhere -- AC-Thor is a separate PV-surplus-triggered
+    load, already its own line in chart_pv_system) split by source: used the
+    instant it was generated, drawn back out of the battery, or bought from
+    the grid. 'Direct' is the residual (house - battery discharge - import)
+    rather than (pv - export - battery charge) -- the latter also contains
+    AC-Thor's own direct draw and doesn't isolate house-only use; verified
+    against real data 2026-08-28 (pv-export-battery_charge overstated direct
+    by roughly the AC-Thor total). Cumulative since PV commissioning, using
+    only rollup_complete days -- see [[project_goodwe_data_quirks]] for why a
+    single day's flows can fail to balance exactly (partial-day timing, grid
+    register noise), which cumulative totals average out.
+
+    Palette chosen from _PALETTE, validated colorblind-safe as a triple
+    against this dashboard's #1e1e2e dark surface (validate_palette.js, all
+    checks pass) -- not every 3-subset of _PALETTE clears the bar, so don't
+    swap these hexes without re-running the validator."""
+    complete = daily[daily["rollup_complete"] == 1]
+    house = complete["house_energy_kwh"].sum()
+    battery = complete["battery_discharge_total_kwh"].sum()
+    grid_import = complete["grid_import_total_kwh"].sum()
+    direct = max(house - battery - grid_import, 0.0)
+
+    fig = go.Figure(go.Pie(
+        labels=["Direct PV", "From Battery", "Grid Import"],
+        values=[direct, battery, grid_import],
+        marker=dict(colors=[_PALETTE[2], _PALETTE[0], _PALETTE[3]],
+                    line=dict(color="#1e1e2e", width=2)),
+        hole=0.45,
+        sort=False,
+        textinfo="label+percent",
+        hovertemplate="%{label}: %{value:.0f} kWh (%{percent})<extra></extra>",
+        domain=dict(x=[0, 0.62]),  # leave room at the right for the legend -- a full-width
+                                    # pie pushed its own slice labels under the legend box
+    ))
+    # Title is static (not the date span) -- the i18n switcher in template.html
+    # replaces title.text wholesale on language change (see chart_weather's
+    # identical static-suffix convention), so a per-build dynamic value here
+    # would vanish on the first language switch. Period goes in a caption
+    # annotation instead, which i18n doesn't touch.
+    fig.update_layout(title="Household Electricity Source")
+    _add_period_caption(fig, complete.index[0], complete.index[-1])
+    return fig
+
+
+def _add_period_caption(fig: go.Figure, start, end) -> None:
+    span = f"{start.strftime('%b %Y')} – {end.strftime('%b %Y')}"
+    fig.add_annotation(
+        text=f"Cumulative, {span}", x=0.5, y=-0.12, xref="paper", yref="paper",
+        showarrow=False, font=dict(size=11, color="#a6adc8"),
+    )
+
+
+def chart_pv_destination(daily: pd.DataFrame) -> go.Figure:
+    """Where generated PV actually goes: used directly by the house, charged
+    into the battery, diverted to hot water (AC-Thor), or exported. This is
+    the supply-side counterpart to chart_consumption_split (which asks where
+    household DEMAND was met from) -- here the four values are mutually
+    exclusive shares of pv_energy_total_kwh itself, not of house_energy_kwh.
+    'Direct' is again a residual (pv - battery_charge - acthor - export)
+    rather than a directly-metered quantity, for the same reason as the other
+    chart: no single counter isolates "used the instant it was generated."
+    Cumulative since PV commissioning, rollup_complete days only.
+
+    A 5th slice (EV charging) is planned once the wallbox lands (spring 2027,
+    see [[project_ev_spring]]) -- don't add it speculatively before there's
+    real evse_readings data, and re-run the palette validator when it's added
+    (this exact 4-color set doesn't have spare headroom verified for a 5th;
+    the seaborn-muted _PALETTE this dashboard otherwise uses everywhere
+    couldn't even clear 4 colors on its own -- brute-forced all 210 four-
+    subsets, zero passed -- so slot 4 here, #c98500 amber, is deliberately
+    NOT from _PALETTE. Chosen amber/gold for a loose warm=hot-water
+    association; validated as a 4-set with _PALETTE[2]/[0]/[3] against this
+    dashboard's #1e1e2e dark surface, all checks pass)."""
+    complete = daily[daily["rollup_complete"] == 1]
+    pv = complete["pv_energy_total_kwh"].sum()
+    battery = complete["battery_charge_total_kwh"].sum()
+    hot_water = complete["acthor_energy_kwh"].sum()
+    export = complete["grid_export_total_kwh"].sum()
+    direct = max(pv - battery - hot_water - export, 0.0)
+
+    fig = go.Figure(go.Pie(
+        labels=["Direct to Household", "To Battery", "To Hot Water", "Exported"],
+        values=[direct, battery, hot_water, export],
+        marker=dict(colors=[_PALETTE[2], _PALETTE[0], "#c98500", _PALETTE[3]],
+                    line=dict(color="#1e1e2e", width=2)),
+        hole=0.45,
+        sort=False,
+        textinfo="label+percent",
+        hovertemplate="%{label}: %{value:.0f} kWh (%{percent})<extra></extra>",
+        domain=dict(x=[0, 0.62]),
+    ))
+    fig.update_layout(title="PV Energy Destination")  # static -- see chart_consumption_split's note on i18n
+    _add_period_caption(fig, complete.index[0], complete.index[-1])
+    return fig
+
+
 def chart_gas_vs_temp(daily: pd.DataFrame, hot_water_kwh: float,
                        heating_balance_temp_c: float | None = None,
                        heating_slope_kwh_per_c: float | None = None) -> go.Figure:
@@ -681,6 +779,8 @@ def build_all(data: dict) -> list[dict]:
         ("Electricity Use",         "chart_elec",     chart_electricity(daily)),
         ("Water Use",               "chart_water",    chart_water(daily)),
         ("PV System",               "chart_pv_system", chart_pv_system(daily)),
+        ("Household Electricity Source", "chart_consumption_split", chart_consumption_split(daily)),
+        ("PV Energy Destination",   "chart_pv_destination", chart_pv_destination(daily)),
         ("Heating Efficiency",      "chart_efficiency", chart_efficiency(daily)),
         ("Gas vs Temperature",      "chart_gas_temp", chart_gas_vs_temp(daily, hot_water, heating_balance_temp_c, heating_slope_kwh_per_c)),
         ("Gas by Day-of-Year",      "chart_doy",      chart_gas_day_of_year(daily, median_doy, recent_doy)),
