@@ -197,7 +197,7 @@ def chart_gas(daily: pd.DataFrame) -> go.Figure:
                              yaxis="y2"))
 
     fig.update_layout(
-        title="Gas Use",
+        title="Gas Import",
         xaxis_title="Date",
         yaxis=dict(title="kWh / day", range=[0, 150]),
         yaxis2=dict(title="MWh / year", overlaying="y", side="right",
@@ -219,7 +219,7 @@ def chart_electricity(daily: pd.DataFrame) -> go.Figure:
                              yaxis="y2"))
 
     fig.update_layout(
-        title="Electricity Use",
+        title="Electricity Import",
         xaxis_title="Date",
         yaxis=dict(title="kWh / day", range=[0, 25]),
         yaxis2=dict(title="MWh / year", overlaying="y", side="right",
@@ -398,9 +398,9 @@ def chart_gas_vs_temp(daily: pd.DataFrame, hot_water_kwh: float,
                   annotation_text=f"Hot water {hot_water_kwh:.0f} kWh/d",
                   annotation_position="top left")
 
-    fig.update_layout(title="Gas Use vs. Min Temperature",
+    fig.update_layout(title="Gas Import vs. Min Temperature",
                       xaxis_title="Min Temperature (°C)",
-                      yaxis_title="Gas Use (kWh/day)",
+                      yaxis_title="Gas Import (kWh/day)",
                       xaxis=dict(range=[-25, 25]),
                       yaxis=dict(range=[0, 200]))
     return fig
@@ -461,14 +461,14 @@ def chart_gas_day_of_year(daily: pd.DataFrame,
                            median_doy: pd.Series,
                            recent_doy: pd.Series) -> go.Figure:
     return _chart_day_of_year(daily, "use_gas_kwh", median_doy, recent_doy,
-                               "Gas Use by Day-of-Year", "Gas Use (kWh/day)", 200)
+                               "Gas Import by Day-of-Year", "Gas Import (kWh/day)", 200)
 
 
 def chart_elec_day_of_year(daily: pd.DataFrame,
                             median_doy: pd.Series,
                             recent_doy: pd.Series) -> go.Figure:
     return _chart_day_of_year(daily, "use_elec_kwh", median_doy, recent_doy,
-                               "Electricity Use by Day-of-Year", "Electricity Use (kWh/day)", 40)
+                               "Electricity Import by Day-of-Year", "Electricity Import (kWh/day)", 40)
 
 
 def _heating_year_xaxis():
@@ -499,9 +499,9 @@ def chart_cumulative_gas_by_year(daily: pd.DataFrame, year_groups: dict) -> go.F
             opacity=1.0 if is_current else 0.6,
         ))
     fig.update_layout(
-        title="Cumulative Gas Use by Heating Year (Jul → Jun)",
+        title="Cumulative Gas Import by Heating Year (Jul → Jun)",
         xaxis=_heating_year_xaxis(),
-        yaxis=dict(title="Cumulative Gas (kWh)"),
+        yaxis=dict(title="Cumulative Gas Import (kWh)"),
     )
     return fig
 
@@ -775,16 +775,16 @@ def build_all(data: dict) -> list[dict]:
     recent_elec_doy = data["recent_elec_doy"]
     weather_dwd = data.get("weather_dwd")
     charts = [
-        ("Gas Use",                 "chart_gas",      chart_gas(daily)),
-        ("Electricity Use",         "chart_elec",     chart_electricity(daily)),
+        ("Gas Import",              "chart_gas",      chart_gas(daily)),
+        ("Electricity Import",      "chart_elec",     chart_electricity(daily)),
         ("Water Use",               "chart_water",    chart_water(daily)),
         ("PV System",               "chart_pv_system", chart_pv_system(daily)),
         ("Household Electricity Source", "chart_consumption_split", chart_consumption_split(daily)),
         ("PV Energy Destination",   "chart_pv_destination", chart_pv_destination(daily)),
         ("Heating Efficiency",      "chart_efficiency", chart_efficiency(daily)),
         ("Gas vs Temperature",      "chart_gas_temp", chart_gas_vs_temp(daily, hot_water, heating_balance_temp_c, heating_slope_kwh_per_c)),
-        ("Gas by Day-of-Year",      "chart_doy",      chart_gas_day_of_year(daily, median_doy, recent_doy)),
-        ("Electricity Use by Day-of-Year", "chart_elec_doy", chart_elec_day_of_year(daily, median_elec_doy, recent_elec_doy)),
+        ("Gas Import by Day-of-Year", "chart_doy",     chart_gas_day_of_year(daily, median_doy, recent_doy)),
+        ("Electricity Import by Day-of-Year", "chart_elec_doy", chart_elec_day_of_year(daily, median_elec_doy, recent_elec_doy)),
         ("Cumulative Gas by Year",  "chart_cum_gas",  chart_cumulative_gas_by_year(daily, year_groups)),
         ("Cumulative Degree Days",  "chart_cum_dd",   chart_cumulative_degree_days(daily, year_groups)),
         ("Efficiency Development",  "chart_eff_trend",chart_efficiency_trend(daily)),
