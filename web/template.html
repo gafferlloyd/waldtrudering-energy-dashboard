@@ -253,6 +253,50 @@
   })();
   {% endfor %}
 
+  // ── Energy Flow Sankey: highlight-on-hover ──────────────────────────────
+  // Plotly's own Sankey hover shows a tooltip but doesn't dim unrelated
+  // flows (unlike the SEMS Go app reference this chart is modelled on) --
+  // added manually: fade every link not touching the hovered node/link,
+  // restored on unhover. Sankey hover eventData carries `.source`/`.target`
+  // node-objects on a link segment; a bare node hover instead has neither,
+  // just a `.label`/node index -- branch on which shape came back rather
+  // than assuming one.
+  (function() {
+    const el = document.getElementById('chart_energy_flow');
+    if (!el || !el.data || !el.data[0] || el.data[0].type !== 'sankey') return;
+    const baseColors = el.data[0].link.color.slice();
+    const DIM = 0.06, FULL = 0.55;
+
+    function setAlpha(color, a) {
+      return color.replace(/[\d.]+\)$/, a + ')');
+    }
+
+    function highlightLinks(matchFn) {
+      const colors = baseColors.map((c, i) => setAlpha(c, matchFn(i) ? FULL : DIM));
+      Plotly.restyle(el, { 'link.color': [colors] });
+    }
+
+    function reset() {
+      Plotly.restyle(el, { 'link.color': [baseColors] });
+    }
+
+    el.on('plotly_hover', function(evt) {
+      const pt = evt.points && evt.points[0];
+      if (!pt) return;
+      if (pt.source !== undefined && pt.target !== undefined) {
+        // hovering a single link ribbon
+        highlightLinks(i => i === pt.pointNumber);
+      } else {
+        // hovering a node -- pointNumber is the node index
+        const nodeIdx = pt.pointNumber;
+        const source = el.data[0].link.source;
+        const target = el.data[0].link.target;
+        highlightLinks(i => source[i] === nodeIdx || target[i] === nodeIdx);
+      }
+    });
+    el.on('plotly_unhover', reset);
+  })();
+
   // ── Time-range buttons ────────────────────────────────────────────────────
   const DATE_CHART_IDS = [
     'chart_gas', 'chart_elec', 'chart_water', 'chart_pv_system',
@@ -288,7 +332,7 @@
   // ── i18n ──────────────────────────────────────────────────────────────────
   const CHART_IDS = [
     'chart_gas','chart_elec','chart_water','chart_pv_system',
-    'chart_consumption_split','chart_pv_destination','chart_efficiency',
+    'chart_consumption_split','chart_pv_destination','chart_energy_flow','chart_efficiency',
     'chart_gas_temp','chart_doy','chart_elec_doy','chart_cum_gas','chart_cum_dd',
     'chart_eff_trend','chart_cost','chart_gdd','chart_weather'
   ];
@@ -317,6 +361,7 @@
       chart_pv_system:  "PV System",
       chart_consumption_split: "Household Electricity Source",
       chart_pv_destination:    "PV Energy Destination",
+      chart_energy_flow:       "Energy Flow",
       chart_efficiency: "Energy Efficiency (rolling)",
       chart_gas_temp:   "Gas Import vs. Min Temperature",
       chart_doy:        "Gas Import by Day-of-Year",
@@ -351,6 +396,7 @@
       chart_pv_system:  "PV-Anlage",
       chart_consumption_split: "Stromquelle Haushalt",
       chart_pv_destination:    "PV-Energie Verwendung",
+      chart_energy_flow:       "Energiefluss",
       chart_efficiency: "Energieeffizienz (gleitend)",
       chart_gas_temp:   "Gasimport vs. Mindesttemperatur",
       chart_doy:        "Gasimport nach Jahrestag",
@@ -385,6 +431,7 @@
       chart_pv_system:  "Impianto Fotovoltaico",
       chart_consumption_split: "Fonte Elettricità Domestica",
       chart_pv_destination:    "Destinazione Energia PV",
+      chart_energy_flow:       "Flusso Energetico",
       chart_efficiency: "Efficienza Energetica (media mobile)",
       chart_gas_temp:   "Gas vs. Temperatura Minima",
       chart_doy:        "Importazione Gas per Giorno dell'Anno",

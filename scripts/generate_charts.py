@@ -363,6 +363,118 @@ def chart_pv_destination(daily: pd.DataFrame) -> go.Figure:
     return fig
 
 
+# Sankey node colours: same entity gets the same colour on both the source and
+# destination side (Battery/Grid each appear twice -- charge vs discharge,
+# import vs export -- as genuinely separate nodes, not netted, matching the
+# SEMS Go app's own "Energy Flow" chart this was modelled on). Violet added
+# for Load since it has no natural home in the existing consumption/
+# destination palettes; validated as a 5-set with the other four against this
+# dashboard's #1e1e2e dark surface (all checks pass) -- re-validate before
+# swapping any of these hexes.
+_SANKEY_SOLAR = _PALETTE[2]      # green
+_SANKEY_BATTERY = _PALETTE[0]    # blue
+_SANKEY_GRID = _PALETTE[3]       # red
+_SANKEY_HOTWATER = "#c98500"     # amber
+_SANKEY_LOAD = "#9085e9"         # violet
+
+
+def _hex_to_rgba(h: str, alpha: float) -> str:
+    r, g, b = _hex_to_rgb(h)
+    return f"rgba({r},{g},{b},{alpha})"
+
+
+def chart_energy_flow(daily: pd.DataFrame) -> go.Figure:
+    """Sankey: sources (Solar/Battery-discharge/Grid-import) on the left,
+    destinations (Battery-charge/Load/Grid-export/Hot Water) on the right.
+    Modelled on the SEMS Go app's "Energy Flow" chart (user-supplied
+    screenshot, 2026-08-30) -- same left-sources/right-destinations shape,
+    Battery and Grid as separate nodes on each side rather than netted.
+
+    Link values are residual-derived, same method and same assumptions as
+    chart_consumption_split/chart_pv_destination: AC-Thor, battery charging,
+    and grid export are all assumed PV-sourced (this system's own design --
+    all three are PV-surplus-triggered, and nothing here contradicts it);
+    Solar-to-Load is what's left of PV after those three; battery discharge
+    and grid import are both assumed to serve Load only (this system has
+    never been observed to export from the battery). Cumulative since PV
+    commissioning, rollup_complete days only -- see [[project_goodwe_data_quirks]].
+    Node-total cross-check: summed Load inflow (solar-direct + battery-
+    discharge + grid-import) lands within ~2.6% of the independently-derived
+    house_energy_kwh total -- expected slack, not a bug, same order of
+    magnitude as other single-metric cross-checks this session."""
+    complete = daily[daily["rollup_complete"] == 1]
+    pv = complete["pv_energy_total_kwh"].sum()
+    battery_charge = complete["battery_charge_total_kwh"].sum()
+    battery_discharge = complete["battery_discharge_total_kwh"].sum()
+    grid_import = complete["grid_import_total_kwh"].sum()
+    grid_export = complete["grid_export_total_kwh"].sum()
+    acthor = complete["acthor_energy_kwh"].sum()
+    solar_direct = max(pv - battery_charge - grid_export - acthor, 0.0)
+
+    # node order: 0 Solar(src) 1 Battery(src) 2 Grid(src) 3 Battery(dst) 4 Load(dst) 5 Grid(dst) 6 Hot Water(dst)
+    labels = ["Solar", "Battery", "Grid", "Battery", "Load", "Grid", "Hot Water"]
+    node_colors = [_SANKEY_SOLAR, _SANKEY_BATTERY, _SANKEY_GRID,
+                   _SANKEY_BATTERY, _SANKEY_LOAD, _SANKEY_GRID, _SANKEY_HOTWATER]
+    node_x = [0.001, 0.001, 0.001, 0.999, 0.999, 0.999, 0.999]
+
+    # Manually stacked y-positions so each column's nodes abut with zero gap
+    # and the column fills the full 0-1 extent -- Plotly's own auto-layout
+    # (even with pad=0) still leaves a hairline gap and doesn't guarantee a
+    # full 0-1 span when node totals differ between the two columns, since
+    # by default it scales each column to the SAME pixel-per-unit rate (the
+    # larger-total column fills more of the row, the smaller one doesn't
+    # reach the edges). Explicit y0/y1 forces both columns to independently
+    # fill 0-1 regardless of the src/dst total mismatch (battery round-trip
+    # loss, meter noise -- see the docstring above).
+    pv_out = battery_charge + acthor + grid_export + solar_direct
+    source_vals = [pv_out, battery_discharge, grid_import]
+    dest_vals = [battery_charge, solar_direct + battery_discharge + grid_import, grid_export, acthor]
+
+    def stacked_midpoints(vals):
+        total = sum(vals)
+        mids, cum = [], 0.0
+        for v in vals:
+            frac = v / total
+            mids.append(cum + frac / 2)
+            cum += frac
+        return mids
+
+    node_y = stacked_midpoints(source_vals) + stacked_midpoints(dest_vals)
+
+    links = [
+        (0, 3, battery_charge, _SANKEY_SOLAR),
+        (0, 6, acthor, _SANKEY_SOLAR),
+        (0, 5, grid_export, _SANKEY_SOLAR),
+        (0, 4, solar_direct, _SANKEY_SOLAR),
+        (1, 4, battery_discharge, _SANKEY_BATTERY),
+        (2, 4, grid_import, _SANKEY_GRID),
+    ]
+
+    fig = go.Figure(go.Sankey(
+        arrangement="fixed",
+        node=dict(
+            label=labels,
+            color=node_colors,
+            x=node_x,
+            y=node_y,
+            pad=1,
+            thickness=18,
+            line=dict(color="#1e1e2e", width=1),
+            hovertemplate="%{label}: %{value:.0f} kWh<extra></extra>",
+        ),
+        link=dict(
+            source=[l[0] for l in links],
+            target=[l[1] for l in links],
+            value=[l[2] for l in links],
+            color=[_hex_to_rgba(l[3], 0.35) for l in links],
+            hovertemplate="%{source.label} → %{target.label}: %{value:.0f} kWh<extra></extra>",
+        ),
+    ))
+    fig.update_layout(title="Energy Flow")
+    _add_period_caption(fig, complete.index[0], complete.index[-1])
+    return fig
+
+
 def chart_gas_vs_temp(daily: pd.DataFrame, hot_water_kwh: float,
                        heating_balance_temp_c: float | None = None,
                        heating_slope_kwh_per_c: float | None = None) -> go.Figure:
@@ -781,6 +893,7 @@ def build_all(data: dict) -> list[dict]:
         ("PV System",               "chart_pv_system", chart_pv_system(daily)),
         ("Household Electricity Source", "chart_consumption_split", chart_consumption_split(daily)),
         ("PV Energy Destination",   "chart_pv_destination", chart_pv_destination(daily)),
+        ("Energy Flow",             "chart_energy_flow", chart_energy_flow(daily)),
         ("Heating Efficiency",      "chart_efficiency", chart_efficiency(daily)),
         ("Gas vs Temperature",      "chart_gas_temp", chart_gas_vs_temp(daily, hot_water, heating_balance_temp_c, heating_slope_kwh_per_c)),
         ("Gas Import by Day-of-Year", "chart_doy",     chart_gas_day_of_year(daily, median_doy, recent_doy)),
