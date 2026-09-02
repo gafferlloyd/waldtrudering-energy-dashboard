@@ -247,26 +247,30 @@ def chart_water(daily: pd.DataFrame) -> go.Figure:
     return fig
 
 
-def _theoretical_max_envelope(daily: pd.DataFrame) -> pd.Series:
-    """Historical-maximum locus of theoretical PV output by calendar date:
-    for each day-of-year, the highest pv_theoretical_kwh ever recorded on
-    that date across the full weather archive (a real clear-sky/long-day
-    ceiling, not this year's weather), lightly smoothed circularly (same
-    method as the efficiency-zone chart) so isolated single-year record days
-    don't spike the curve, then mapped back onto every date in `daily` so it
-    repeats as one smooth wave per year across the whole multi-year x-axis."""
+def _theoretical_envelope(daily: pd.DataFrame, how: str) -> pd.Series:
+    """Historical max/min locus of theoretical PV output by calendar date:
+    for each day-of-year, the highest (or lowest) pv_theoretical_kwh ever
+    recorded on that date across the full weather archive -- a real
+    clear-sky-ceiling / overcast-floor bound, not this year's weather --
+    lightly smoothed circularly (same method as the efficiency-zone chart)
+    so isolated single-year extremes don't spike the curve, then mapped back
+    onto every date in `daily` so it repeats as one smooth wave per year
+    across the whole multi-year x-axis. `how` is 'max' or 'min'."""
     th = daily["pv_theoretical_kwh"].dropna()
-    max_by_doy = th.groupby(th.index.dayofyear).max()
-    max_by_doy = max_by_doy.reindex(range(1, 367)).interpolate().bfill().ffill()
-    smoothed = pd.Series(_smooth_circular(max_by_doy.to_numpy(), window=7), index=max_by_doy.index)
+    by_doy = getattr(th.groupby(th.index.dayofyear), how)()
+    by_doy = by_doy.reindex(range(1, 367)).interpolate().bfill().ffill()
+    smoothed = pd.Series(_smooth_circular(by_doy.to_numpy(), window=7), index=by_doy.index)
     return daily.index.dayofyear.map(smoothed)
 
 
 def chart_pv_system(daily: pd.DataFrame) -> go.Figure:
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=daily.index, y=_theoretical_max_envelope(daily),
+    fig.add_trace(go.Scatter(x=daily.index, y=_theoretical_envelope(daily, "max"),
                              name="Theoretical Max (historical)",
                              line=dict(color=_PALETTE[7], width=1, dash="dash"), opacity=0.7))
+    fig.add_trace(go.Scatter(x=daily.index, y=_theoretical_envelope(daily, "min"),
+                             name="Theoretical Min (historical)",
+                             line=dict(color=_PALETTE[7], width=1, dash="dashdot"), opacity=0.7))
     fig.add_trace(go.Scatter(x=daily.index, y=daily["pv_theoretical_kwh"],
                              name="Theoretical PV", line=dict(color=_PALETTE[7], width=1, dash="dot")))
     fig.add_trace(go.Scatter(x=daily.index, y=daily["pv_energy_total_kwh"],
