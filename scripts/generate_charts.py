@@ -247,29 +247,40 @@ def chart_water(daily: pd.DataFrame) -> go.Figure:
     return fig
 
 
-def _theoretical_envelope(daily: pd.DataFrame, how: str) -> pd.Series:
-    """Historical max/min locus of theoretical PV output by calendar date:
-    for each day-of-year, the highest (or lowest) pv_theoretical_kwh ever
-    recorded on that date across the full weather archive -- a real
-    clear-sky-ceiling / overcast-floor bound, not this year's weather --
-    lightly smoothed circularly (same method as the efficiency-zone chart)
-    so isolated single-year extremes don't spike the curve, then mapped back
-    onto every date in `daily` so it repeats as one smooth wave per year
-    across the whole multi-year x-axis. `how` is 'max' or 'min'."""
-    th = daily["pv_theoretical_kwh"].dropna()
-    by_doy = getattr(th.groupby(th.index.dayofyear), how)()
-    by_doy = by_doy.reindex(range(1, 367)).interpolate().bfill().ffill()
+def _measured_envelope(daily: pd.DataFrame, how: str) -> pd.Series:
+    """Historical max/min locus of MEASURED PV output by calendar date: for
+    each day-of-year, the highest (or lowest) actual pv_energy_total_kwh
+    ever recorded on that date, lightly smoothed circularly (same method as
+    the efficiency-zone chart) so a single-day blip doesn't spike the curve.
+
+    Deliberately built from real output, not the theoretical weather model
+    -- this site has confirmed local impairments (dormer shadow, neighbour
+    roof, the 70% export-cap clipping, dawn sensor-lag bias -- see
+    [[project_pv_ratio_departures]]) that a generic geometry+weather model
+    doesn't know about, so a theoretical envelope can't reflect them. An
+    envelope built from measurements does, by construction, and gets more
+    complete as more real seasons are logged.
+
+    Since PV only went live 2026-06-30, most of the year has NO real data
+    yet -- those days are left as NaN (a gap in the plotted line), not
+    filled/interpolated from neighbouring days. Fabricating a value for a
+    day-of-year never actually observed would defeat the entire point of
+    using measured data. The gap will close on its own as real seasons
+    accumulate; don't backfill it artificially in the meantime."""
+    actual = daily["pv_energy_total_kwh"].dropna()
+    by_doy = getattr(actual.groupby(actual.index.dayofyear), how)()
+    by_doy = by_doy.reindex(range(1, 367))  # NaN for any day-of-year never yet observed
     smoothed = pd.Series(_smooth_circular(by_doy.to_numpy(), window=7), index=by_doy.index)
     return daily.index.dayofyear.map(smoothed)
 
 
 def chart_pv_system(daily: pd.DataFrame) -> go.Figure:
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=daily.index, y=_theoretical_envelope(daily, "max"),
-                             name="Theoretical Max (historical)",
+    fig.add_trace(go.Scatter(x=daily.index, y=_measured_envelope(daily, "max"),
+                             name="Measured Max (historical)",
                              line=dict(color=_PALETTE[7], width=1, dash="dash"), opacity=0.7))
-    fig.add_trace(go.Scatter(x=daily.index, y=_theoretical_envelope(daily, "min"),
-                             name="Theoretical Min (historical)",
+    fig.add_trace(go.Scatter(x=daily.index, y=_measured_envelope(daily, "min"),
+                             name="Measured Min (historical)",
                              line=dict(color=_PALETTE[7], width=1, dash="dashdot"), opacity=0.7))
     fig.add_trace(go.Scatter(x=daily.index, y=daily["pv_theoretical_kwh"],
                              name="Theoretical PV", line=dict(color=_PALETTE[7], width=1, dash="dot")))
