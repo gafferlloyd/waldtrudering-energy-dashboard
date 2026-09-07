@@ -5,6 +5,7 @@ Loads archived + fresh data, merges onto a daily date range, interpolates
 missing meter readings, and computes all derived quantities used in charts.
 """
 import sqlite3
+import sys
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -12,6 +13,9 @@ import yaml
 
 ROOT = Path(__file__).parent.parent
 EXCEL_EPOCH = pd.Timestamp("1899-12-30")
+
+sys.path.insert(0, str(Path(__file__).parent))
+from fetch_openmeteo_historical import ARRAY_AREA_M2, PANEL_EFFICIENCY  # same-project reuse, not a cross-repo import
 
 
 def load_config():
@@ -99,14 +103,41 @@ def _load_weather_fresh(path: Path) -> pd.DataFrame:
         return df.dropna(subset=["date"])
 
 
+def load_openmeteo_historical(cache_dir: Path) -> pd.DataFrame | None:
+    """Load cache/openmeteo_historical.csv (date, gti_kwh_m2, sunshine_h),
+    or None if absent. See fetch_openmeteo_historical.py for how this is
+    produced and why (Open-Meteo Historical Weather API / ERA5, tilt/
+    azimuth-projected GTI for the theoretical-PV model, plus sunshine_h as
+    the third-tier fallback in load_dwd_weather()'s backfill chain)."""
+    path = cache_dir / "openmeteo_historical.csv"
+    if not path.exists():
+        return None
+    df = pd.read_csv(path, parse_dates=["date"])
+    for col in ["gti_kwh_m2", "sunshine_h"]:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+    return df.sort_values("date").set_index("date")
+
+
 def load_dwd_weather(cache_dir: Path | None = None) -> pd.DataFrame | None:
     """Load DWD airport weather from cache/dwd_weather.csv, or None if absent.
 
     DWD's own sunshine sensor (SDK) has been dead since 2026-05-01. Wherever
-    DWD's sunshine is missing, backfill from LMU Munich-city (cache/lmu_city_weather.csv)
-    — never Garching, which runs a different microclimate. This is a plain
-    NaN-fill: the moment DWD reports real sunshine again, its value wins and
-    the substitute stops being touched — no date cutoff to maintain by hand.
+    DWD's sunshine is missing, backfill from LMU Munich-city
+    (cache/lmu_city_weather.csv) — never Garching, which runs a different
+    microclimate — and if LMU is ALSO missing for a date, fall back to
+    Open-Meteo's historical sunshine_h (cache/openmeteo_historical.csv).
+    DWD/LMU stay primary deliberately: they're real ground measurements,
+    Open-Meteo's historical sunshine is reanalysis-modeled, so it's a
+    last-resort tier, not a replacement (2026-09-07 decision — see
+    process.py's theoretical-PV block for why Open-Meteo's irradiance IS
+    trusted as primary there: that's a different question, about which
+    conversion model best predicts real generation, not about which
+    sunshine number is most authentic).
+
+    This is a plain NaN-fill at each tier: the moment a higher-priority
+    source reports a real value again, it wins and the substitute stops
+    being touched — no date cutoffs to maintain by hand. sunshine_source
+    records which tier actually filled each day, for an audit trail.
     """
     if cache_dir is None:
         return None
@@ -119,7 +150,9 @@ def load_dwd_weather(cache_dir: Path | None = None) -> pd.DataFrame | None:
         df[col] = pd.to_numeric(df[col], errors="coerce")
     df = df.sort_values("date").set_index("date")
 
-    df["sunshine_is_substitute"] = False
+    df["sunshine_source"] = "dwd"
+    df.loc[df["sunshine"].isna(), "sunshine_source"] = None
+
     city_path = cache_dir / "lmu_city_weather.csv"
     if city_path.exists():
         city = pd.read_csv(city_path, parse_dates=["date"])
@@ -127,8 +160,20 @@ def load_dwd_weather(cache_dir: Path | None = None) -> pd.DataFrame | None:
         city_sunshine = city.dropna(subset=["date"]).set_index("date")["sunshine"]
         gap = df["sunshine"].isna()
         fill = city_sunshine.reindex(df.index)
-        df.loc[gap, "sunshine_is_substitute"] = fill[gap].notna()
+        filled = gap & fill.notna()
+        df.loc[filled, "sunshine_source"] = "lmu"
         df["sunshine"] = df["sunshine"].fillna(fill)
+
+    openmeteo = load_openmeteo_historical(cache_dir)
+    if openmeteo is not None:
+        gap = df["sunshine"].isna()
+        fill = openmeteo["sunshine_h"].reindex(df.index)
+        filled = gap & fill.notna()
+        df.loc[filled, "sunshine_source"] = "openmeteo"
+        df["sunshine"] = df["sunshine"].fillna(fill)
+
+    # kept for any external code still reading the old boolean flag
+    df["sunshine_is_substitute"] = df["sunshine_source"] != "dwd"
 
     return df
 
@@ -330,20 +375,19 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None,
     gas_prices  = cfg["gas_prices"]
     elec_prices = cfg["elec_prices"]
     floor_area = cfg["floor_area_m2"]
-    pv_kwp = cfg["pv_kwp"]
     pv_performance_ratio = cfg["pv_performance_ratio"]
-    pv_latitude_deg = cfg["pv_latitude_deg"]
-    pv_angstrom_as = cfg["pv_angstrom_as"]
-    pv_angstrom_bs = cfg["pv_angstrom_bs"]
 
     if goodwe_db_path is None:
         goodwe_db_path = Path(cfg.get("goodwe_db_path", "/home/gareth/goodwe_solar/data.db"))
 
     meter = load_meter_data(data_dir, cache_dir)
     weather_dwd = load_dwd_weather(cache_dir)
+    openmeteo_hist = load_openmeteo_historical(cache_dir)
 
     if weather_dwd is None:
         raise RuntimeError("DWD weather data not found — run fetch_dwd_weather.py first")
+    if openmeteo_hist is None:
+        raise RuntimeError("Open-Meteo historical data not found — run fetch_openmeteo_historical.py first")
 
     # Date range: first date with all three meter readings → latest of DWD or meter.
     # Meter data can arrive ahead of DWD (which lags ~1-2 days), so we extend
@@ -357,6 +401,12 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None,
     w = weather_dwd.reindex(date_range)
     for col in ["tmax", "tmit", "tmin", "rain", "sunshine"]:
         w[col] = w[col].interpolate(method="index", limit=7, limit_area="inside")
+
+    # Reindex Open-Meteo's GTI series the same way -- small interior gaps
+    # (e.g. a day the archive API had a transient hiccup) interpolated,
+    # never extrapolated past real coverage.
+    om = openmeteo_hist.reindex(date_range)
+    om["gti_kwh_m2"] = om["gti_kwh_m2"].interpolate(method="index", limit=7, limit_area="inside")
 
     # Load goodwe_solar's daily rollup early (needed below, to reconcile meter
     # gaps) -- prefer the live DB, fall back to the committed CSV snapshot when
@@ -414,6 +464,7 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None,
     # Join weather (offset by 1 since diff loses first row)
     for col in ["tmax", "tmit", "tmin", "rain", "sunshine"]:
         daily[col] = w[col].iloc[1:].values
+    daily["gti_kwh_m2"] = om["gti_kwh_m2"].iloc[1:].values
 
     # Join goodwe_solar's daily rollup (AC-Thor/PV/battery) — left join on date;
     # NaN before 2026-06-22 PV install is correct (nothing existed yet).
@@ -428,28 +479,19 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None,
     dd = np.maximum(0.0, base_temp - daily["tmit"])
     daily["degree_days"] = np.where(dd > 0, dd + dd_offset, 0.0)
 
-    # Theoretical PV output: FAO-56 Angström-Prescott solar-radiation-from-
-    # sunshine-hours model (Allen et al. 1998, ch. 3), applied to the site's
-    # 10.52 kWp array. Deliberately uses horizontal-surface radiation rather
-    # than a tilted plane-of-array transposition -- self-contained (no import
-    # of goodwe_solar's own, more accurate but only ~7-week-deep irradiance
-    # model) at the cost of not modelling the 40°-tilt/SE-azimuth seasonal
-    # skew explicitly; that skew is absorbed into pv_performance_ratio as a
-    # single scalar instead of a proper POA transposition.
-    lat_rad = np.radians(pv_latitude_deg)
-    doy = daily.index.dayofyear.values.astype(float)
-    dr = 1 + 0.033 * np.cos(2 * np.pi * doy / 365)
-    decl = 0.409 * np.sin(2 * np.pi * doy / 365 - 1.39)
-    sunset_angle = np.arccos(np.clip(-np.tan(lat_rad) * np.tan(decl), -1.0, 1.0))
-    max_daylight_hours = (24 / np.pi) * sunset_angle
-    Gsc = 0.0820  # MJ m-2 min-1, solar constant
-    Ra = ((24 * 60 / np.pi) * Gsc * dr *
-          (sunset_angle * np.sin(lat_rad) * np.sin(decl)
-           + np.cos(lat_rad) * np.cos(decl) * np.sin(sunset_angle)))
-    sunshine_fraction = np.clip(daily["sunshine"].values / max_daylight_hours, 0.0, 1.0)
-    Rs = (pv_angstrom_as + pv_angstrom_bs * sunshine_fraction) * Ra  # MJ/m2/day
-    Rs_kwh_m2 = Rs / 3.6
-    daily["pv_theoretical_kwh"] = Rs_kwh_m2 * pv_kwp * pv_performance_ratio
+    # Theoretical PV output: Open-Meteo's historical global_tilted_irradiance
+    # (cache/openmeteo_historical.csv via fetch_openmeteo_historical.py),
+    # already tilt/azimuth-projected onto this array by Open-Meteo itself --
+    # replaced the previous self-contained FAO-56 Angstrom-Prescott approach
+    # (horizontal-surface radiation from sunshine-hours) 2026-09-07, after
+    # backtesting both against 68 days of real generation
+    # (goodwe_solar/forecast_client.py backtest()): GTI MAE 5.4 kWh/day /
+    # 109.8% of actual cumulative, clearly beats Angstrom's MAE 9.6 / 117.8%.
+    # The old approach deliberately avoided a proper tilted model because
+    # goodwe_solar's own irradiance history was, at the time, only ~7 weeks
+    # deep -- Open-Meteo's archive covers back to 1940, so that limitation
+    # no longer applies.
+    daily["pv_theoretical_kwh"] = daily["gti_kwh_m2"] * ARRAY_AREA_M2 * PANEL_EFFICIENCY * pv_performance_ratio
 
     # Hot-water baseline: segmented (hinge) regression of gas vs tmin.
     # gas(tmin) = baseline for tmin >= T*, baseline + slope*(T* - tmin) below T*.

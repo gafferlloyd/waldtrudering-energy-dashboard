@@ -52,6 +52,10 @@ def main():
         import fetch_lmu_sunshine
         fetch_lmu_sunshine.fetch(cache_dir)
 
+        print("Step 1e: Fetching Open-Meteo historical irradiance…")
+        import fetch_openmeteo_historical
+        fetch_openmeteo_historical.fetch(cache_dir)
+
     # ── 2. Process ────────────────────────────────────────────────────────────
     print("Step 2: Processing data…")
     import process

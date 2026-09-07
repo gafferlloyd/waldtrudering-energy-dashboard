@@ -6,18 +6,22 @@ gas_calorific_kwh_per_m3: 11.266
 goodwe_db_path: "/home/gareth/goodwe_solar/data.db"   # cross-project read-only source for
     # daily_rollup (AC-Thor/PV/battery) — see goodwe_solar/daily_rollup.py
 
-# PV system specs (AIKO A480-MCE54Db x23, installed 2026-06-22) — used only to
-# derive the "theoretical PV" chart proxy from historical sunshine-hours data.
-# goodwe_solar's own irradiance model is the authoritative real-time source; this
-# is a self-contained, long-history complement (FAO-56 Angström-Prescott).
-pv_kwp: 10.52
-pv_performance_ratio: 0.80   # lumps inverter/temp/soiling/wiring losses AND the
-    # horizontal-vs-40°-tilt irradiance difference into one factor; revisit once
-    # more real pv_energy_total_kwh history accumulates (see calibration print
-    # in process.py's __main__ block)
-pv_latitude_deg: 48.1157     # site latitude — matches goodwe_solar/solar_position.py
-pv_angstrom_as: 0.25         # FAO-56 default Angström-Prescott regression
-pv_angstrom_bs: 0.50         # constants (no local calibration station)
+# PV system specs (AIKO A480-MCE54Db x23, installed 2026-06-22) — the
+# "theoretical PV" chart proxy is derived from Open-Meteo's historical
+# global_tilted_irradiance (cache/openmeteo_historical.csv, already
+# tilt/azimuth-projected onto this array by Open-Meteo itself; array
+# geometry constants live in fetch_openmeteo_historical.py, copied from
+# goodwe_solar/solar_position.py). Backtested 2026-09-07 against 68 days
+# of real generation: MAE 5.4 kWh/day, 109.8% of actual cumulative --
+# replaced the previous self-contained FAO-56 Angström-Prescott approach
+# (horizontal-surface radiation from sunshine-hours), which backtested
+# worse (MAE 9.6, 117.8%) over the same period.
+pv_performance_ratio: 0.80   # inverter/temp/soiling/wiring losses only now --
+    # previously also absorbed the horizontal-vs-40°-tilt irradiance gap, no
+    # longer needed since GTI is already tilt-projected; kept at the same
+    # value since that's what the 2026-09-07 backtest above validated it
+    # against. Revisit once more real pv_energy_total_kwh history
+    # accumulates (see calibration print in process.py's __main__ block)
 
 # Google Sheet CSV export URLs
 # Current meter readings (from 2026-07-07, new electricity meter starting at 0)
@@ -53,7 +57,7 @@ elec_prices:
   - from: "2025-07-28"
     price: 0.294   # Naturwelt
   - from: "2026-07-29"
-    price: 0.2732  # Grundpreis 220.82 EUR/yr (not yet tracked)
+    price: 0.2732  # E.ON, Grundpreis 220.82 EUR/yr
 
 # Date-based gas prices (EUR/kWh). Price applies from the given date onwards.
 gas_prices:
@@ -80,4 +84,4 @@ gas_prices:
   - from: "2025-07-11"
     price: 0.091   # Grünwelt
   - from: "2026-07-11"
-    price: 0.0931  # Grundpreis 14.02 EUR/mo (not yet tracked)
+    price: 0.0931  # Montana, Grundpreis 14.02 EUR/mo
