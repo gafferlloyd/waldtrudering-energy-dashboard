@@ -144,18 +144,36 @@
     .chart-card .plotly-graph-div { width: 100% !important; }
 
     .records-tiles {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 0.75rem 2rem;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem 2rem;
-      margin-bottom: 1.25rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.75rem;
     }
-    .records-tiles .stat { min-width: 150px; cursor: default; }
-    .stat-value-line { font-size: 0.85rem; color: var(--text); }
-    .stat-value-line .is-record { color: var(--green); font-weight: 700; }
+    .record-tile {
+      background: var(--overlay);
+      border-radius: 12px;
+      padding: 1.1rem 1.25rem;
+      border-left: 4px solid var(--tile-accent, var(--accent));
+    }
+    .record-tile .r-label {
+      color: var(--subtext);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .record-tile .r-sub {
+      color: var(--subtext);
+      font-size: 0.72rem;
+      margin-top: 0.15rem;
+    }
+    .record-tile .r-value {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-top: 0.5rem;
+      color: var(--text);
+    }
+    .record-tile .r-value + .r-value { margin-top: 0.2rem; }
+    .record-tile .is-record { color: var(--green); }
   </style>
 </head>
 <body>
@@ -167,7 +185,7 @@
   <span class="meta" data-i18n-tpl="meter_through" data-date="07 Sep 2026">Meter through 07 Sep 2026</span>
   <span class="meta" data-i18n-tpl="weather_through" data-date="07 Sep 2026">Weather through 07 Sep 2026</span>
   <div class="header-right">
-    <span class="meta" data-i18n-tpl="built_at" data-time="2026-09-08 09:36 UTC">Built 2026-09-08 09:36 UTC</span>
+    <span class="meta" data-i18n-tpl="built_at" data-time="2026-09-08 09:42 UTC">Built 2026-09-08 09:42 UTC</span>
     <div class="page-nav">
       <a href="index.html" class="" data-i18n="nav_energy">Energy</a>
       <a href="weather.html" class="active" data-i18n="nav_weather">Weather</a>
@@ -192,90 +210,103 @@
   
   <div class="records-tiles">
     
-    <div class="stat" title="22 Dec 1996 – 19 Jan 1997 · record annual count set 13 Mar 1996">
-      <span class="stat-label">Ice days (Tmax < 0°C)</span>
-      <span class="stat-unit" data-i18n="records_record_current">record (current)</span>
-      <span class="stat-value-line">streak 29 <span class="">(0)</span></span>
-      <span class="stat-value-line">annual 64 <span class="">(17)</span></span>
+    <div class="record-tile" style="--tile-accent: #4C72B0"
+         title="22 Dec 1996 – 19 Jan 1997 · record annual count set 13 Mar 1996">
+      <div class="r-label">Ice days (Tmax < 0°C)</div>
+      <div class="r-sub" data-i18n="records_record_current">record (current)</div>
+      <div class="r-value">streak 29 <span class="">(0)</span></div>
+      <div class="r-value">annual 64 <span class="">(17)</span></div>
     </div>
     
-    <div class="stat" title="26 Dec 1995 – 16 Feb 1996 · record annual count set 11 Nov 2021">
-      <span class="stat-label">Frost days (Tmin ≤ 0°C)</span>
-      <span class="stat-unit" data-i18n="records_record_current">record (current)</span>
-      <span class="stat-value-line">streak 53 <span class="">(0)</span></span>
-      <span class="stat-value-line">annual 145 <span class="">(118)</span></span>
+    <div class="record-tile" style="--tile-accent: #64B5CD"
+         title="26 Dec 1995 – 16 Feb 1996 · record annual count set 11 Nov 2021">
+      <div class="r-label">Frost days (Tmin ≤ 0°C)</div>
+      <div class="r-sub" data-i18n="records_record_current">record (current)</div>
+      <div class="r-value">streak 53 <span class="">(0)</span></div>
+      <div class="r-value">annual 145 <span class="">(118)</span></div>
     </div>
     
-    <div class="stat" title="13 Jun 2026 – 17 Aug 2026 · record annual count set 18 May 2024">
-      <span class="stat-label">Days ≥ 20°C</span>
-      <span class="stat-unit" data-i18n="records_record_current">record (current)</span>
-      <span class="stat-value-line">streak 66 <span class="">(13)</span></span>
-      <span class="stat-value-line">annual 154 <span class="">(122)</span></span>
+    <div class="record-tile" style="--tile-accent: #64B5CD"
+         title="13 Jun 2026 – 17 Aug 2026 · record annual count set 18 May 2024">
+      <div class="r-label">Days ≥ 20°C</div>
+      <div class="r-sub" data-i18n="records_record_current">record (current)</div>
+      <div class="r-value">streak 66 <span class="">(13)</span></div>
+      <div class="r-value">annual 154 <span class="">(122)</span></div>
     </div>
     
-    <div class="stat" title="21 Jul 1994 – 11 Aug 1994 · record annual count set 22 Sep 2003">
-      <span class="stat-label">Days ≥ 25°C</span>
-      <span class="stat-unit" data-i18n="records_record_current">record (current)</span>
-      <span class="stat-value-line">streak 22 <span class="">(1)</span></span>
-      <span class="stat-value-line">annual 82 <span class="">(81)</span></span>
+    <div class="record-tile" style="--tile-accent: #55A868"
+         title="21 Jul 1994 – 11 Aug 1994 · record annual count set 22 Sep 2003">
+      <div class="r-label">Days ≥ 25°C</div>
+      <div class="r-sub" data-i18n="records_record_current">record (current)</div>
+      <div class="r-value">streak 22 <span class="">(1)</span></div>
+      <div class="r-value">annual 82 <span class="">(81)</span></div>
     </div>
     
-    <div class="stat" title="02 Aug 2003 – 13 Aug 2003 · record annual count set 04 Sep 2026">
-      <span class="stat-label">Days ≥ 30°C</span>
-      <span class="stat-unit" data-i18n="records_record_current">record (current)</span>
-      <span class="stat-value-line">streak 12 <span class="">(0)</span></span>
-      <span class="stat-value-line">annual 36 <span class="is-record">(36)</span></span>
+    <div class="record-tile" style="--tile-accent: #C44E52"
+         title="02 Aug 2003 – 13 Aug 2003 · record annual count set 04 Sep 2026">
+      <div class="r-label">Days ≥ 30°C</div>
+      <div class="r-sub" data-i18n="records_record_current">record (current)</div>
+      <div class="r-value">streak 12 <span class="">(0)</span></div>
+      <div class="r-value">annual 36 <span class="is-record">(36)</span></div>
     </div>
     
-    <div class="stat" title="31 Mar 2020 – 26 Apr 2020 · record annual count set 01 Apr 2019">
-      <span class="stat-label">Sunny days</span>
-      <span class="stat-unit" data-i18n="records_record_current">record (current)</span>
-      <span class="stat-value-line">streak 27 <span class="">(2)</span></span>
-      <span class="stat-value-line">annual 178 <span class="">(156)</span></span>
+    <div class="record-tile" style="--tile-accent: #CCB974"
+         title="31 Mar 2020 – 26 Apr 2020 · record annual count set 01 Apr 2019">
+      <div class="r-label">Sunny days</div>
+      <div class="r-sub" data-i18n="records_record_current">record (current)</div>
+      <div class="r-value">streak 27 <span class="">(2)</span></div>
+      <div class="r-value">annual 178 <span class="">(156)</span></div>
     </div>
     
-    <div class="stat" title="05 Jul 1996 – 10 Jul 1996 · record annual count set 10 Oct 2024">
-      <span class="stat-label">Rainy days (> 5mm)</span>
-      <span class="stat-unit" data-i18n="records_record_current">record (current)</span>
-      <span class="stat-value-line">streak 6 <span class="">(0)</span></span>
-      <span class="stat-value-line">annual 72 <span class="">(33)</span></span>
+    <div class="record-tile" style="--tile-accent: #4C72B0"
+         title="05 Jul 1996 – 10 Jul 1996 · record annual count set 10 Oct 2024">
+      <div class="r-label">Rainy days (> 5mm)</div>
+      <div class="r-sub" data-i18n="records_record_current">record (current)</div>
+      <div class="r-value">streak 6 <span class="">(0)</span></div>
+      <div class="r-value">annual 72 <span class="">(33)</span></div>
     </div>
     
     
-    <div class="stat" title="lowest 19 Jan 1997 · highest 15 Jun 2007">
-      <span class="stat-label">Annual min. temperature</span>
-      <span class="stat-unit" data-i18n="records_min_curr_max">(min–curr–max)</span>
-      <span class="stat-value-line">2.6°C – 4.1°C – 5.9°C</span>
+    <div class="record-tile" style="--tile-accent: #64B5CD"
+         title="lowest 19 Jan 1997 · highest 15 Jun 2007">
+      <div class="r-label">Annual min. temperature</div>
+      <div class="r-sub" data-i18n="records_min_curr_max">(min–curr–max)</div>
+      <div class="r-value">2.6°C – 4.1°C – 5.9°C</div>
     </div>
     
-    <div class="stat" title="lowest 19 Jan 1997 · highest 08 Sep 2024">
-      <span class="stat-label">Annual mean temperature</span>
-      <span class="stat-unit" data-i18n="records_min_curr_max">(min–curr–max)</span>
-      <span class="stat-value-line">7.0°C – 10.1°C – 11.2°C</span>
+    <div class="record-tile" style="--tile-accent: #55A868"
+         title="lowest 19 Jan 1997 · highest 08 Sep 2024">
+      <div class="r-label">Annual mean temperature</div>
+      <div class="r-sub" data-i18n="records_min_curr_max">(min–curr–max)</div>
+      <div class="r-value">7.0°C – 10.1°C – 11.2°C</div>
     </div>
     
-    <div class="stat" title="lowest 31 Oct 1996 · highest 18 May 2024">
-      <span class="stat-label">Annual max. temperature</span>
-      <span class="stat-unit" data-i18n="records_min_curr_max">(min–curr–max)</span>
-      <span class="stat-value-line">11.2°C – 15.6°C – 16.7°C</span>
+    <div class="record-tile" style="--tile-accent: #C44E52"
+         title="lowest 31 Oct 1996 · highest 18 May 2024">
+      <div class="r-label">Annual max. temperature</div>
+      <div class="r-sub" data-i18n="records_min_curr_max">(min–curr–max)</div>
+      <div class="r-value">11.2°C – 15.6°C – 16.7°C</div>
     </div>
     
-    <div class="stat" title="lowest 04 Jan 2004 · highest 23 Oct 2024">
-      <span class="stat-label">Annual rainfall</span>
-      <span class="stat-unit" data-i18n="records_min_curr_max">(min–curr–max)</span>
-      <span class="stat-value-line">488.6mm – 573.5mm – 1264.7mm</span>
+    <div class="record-tile" style="--tile-accent: #4C72B0"
+         title="lowest 04 Jan 2004 · highest 23 Oct 2024">
+      <div class="r-label">Annual rainfall</div>
+      <div class="r-sub" data-i18n="records_min_curr_max">(min–curr–max)</div>
+      <div class="r-value">488.6mm – 573.5mm – 1264.7mm</div>
     </div>
     
-    <div class="stat" title="lowest 12 Jun 1994 · highest 10 Jun 2007">
-      <span class="stat-label">Annual sunshine</span>
-      <span class="stat-unit" data-i18n="records_min_curr_max">(min–curr–max)</span>
-      <span class="stat-value-line">1434.8h – 2071.3h – 2291.7h</span>
+    <div class="record-tile" style="--tile-accent: #CCB974"
+         title="lowest 12 Jun 1994 · highest 10 Jun 2007">
+      <div class="r-label">Annual sunshine</div>
+      <div class="r-sub" data-i18n="records_min_curr_max">(min–curr–max)</div>
+      <div class="r-value">1434.8h – 2071.3h – 2291.7h</div>
     </div>
     
-    <div class="stat" title="lowest 09 Jun 1994 · highest 04 Jan 2004">
-      <span class="stat-label">Sunshine : Rain ratio</span>
-      <span class="stat-unit" data-i18n="records_min_curr_max">(min–curr–max)</span>
-      <span class="stat-value-line">1.5 – 3.6 – 4.6</span>
+    <div class="record-tile" style="--tile-accent: #8172B3"
+         title="lowest 09 Jun 1994 · highest 04 Jan 2004">
+      <div class="r-label">Sunshine : Rain ratio</div>
+      <div class="r-sub" data-i18n="records_min_curr_max">(min–curr–max)</div>
+      <div class="r-value">1.5 – 3.6 – 4.6</div>
     </div>
     
   </div>

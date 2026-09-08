@@ -144,18 +144,36 @@
     .chart-card .plotly-graph-div { width: 100% !important; }
 
     .records-tiles {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 0.75rem 2rem;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem 2rem;
-      margin-bottom: 1.25rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.75rem;
     }
-    .records-tiles .stat { min-width: 150px; cursor: default; }
-    .stat-value-line { font-size: 0.85rem; color: var(--text); }
-    .stat-value-line .is-record { color: var(--green); font-weight: 700; }
+    .record-tile {
+      background: var(--overlay);
+      border-radius: 12px;
+      padding: 1.1rem 1.25rem;
+      border-left: 4px solid var(--tile-accent, var(--accent));
+    }
+    .record-tile .r-label {
+      color: var(--subtext);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .record-tile .r-sub {
+      color: var(--subtext);
+      font-size: 0.72rem;
+      margin-top: 0.15rem;
+    }
+    .record-tile .r-value {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-top: 0.5rem;
+      color: var(--text);
+    }
+    .record-tile .r-value + .r-value { margin-top: 0.2rem; }
+    .record-tile .is-record { color: var(--green); }
   </style>
 </head>
 <body>
@@ -167,7 +185,7 @@
   <span class="meta" data-i18n-tpl="meter_through" data-date="07 Sep 2026">Meter through 07 Sep 2026</span>
   <span class="meta" data-i18n-tpl="weather_through" data-date="07 Sep 2026">Weather through 07 Sep 2026</span>
   <div class="header-right">
-    <span class="meta" data-i18n-tpl="built_at" data-time="2026-09-08 09:36 UTC">Built 2026-09-08 09:36 UTC</span>
+    <span class="meta" data-i18n-tpl="built_at" data-time="2026-09-08 09:42 UTC">Built 2026-09-08 09:42 UTC</span>
     <div class="page-nav">
       <a href="index.html" class="active" data-i18n="nav_energy">Energy</a>
       <a href="weather.html" class="" data-i18n="nav_weather">Weather</a>
