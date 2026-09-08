@@ -144,18 +144,36 @@
     .chart-card .plotly-graph-div { width: 100% !important; }
 
     .records-tiles {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 0.75rem 2rem;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem 2rem;
-      margin-bottom: 1.25rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.75rem;
     }
-    .records-tiles .stat { min-width: 150px; cursor: default; }
-    .stat-value-line { font-size: 0.85rem; color: var(--text); }
-    .stat-value-line .is-record { color: var(--green); font-weight: 700; }
+    .record-tile {
+      background: var(--overlay);
+      border-radius: 12px;
+      padding: 1.1rem 1.25rem;
+      border-left: 4px solid var(--tile-accent, var(--accent));
+    }
+    .record-tile .r-label {
+      color: var(--subtext);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .record-tile .r-sub {
+      color: var(--subtext);
+      font-size: 0.72rem;
+      margin-top: 0.15rem;
+    }
+    .record-tile .r-value {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-top: 0.5rem;
+      color: var(--text);
+    }
+    .record-tile .r-value + .r-value { margin-top: 0.2rem; }
+    .record-tile .is-record { color: var(--green); }
   </style>
 </head>
 <body>
@@ -270,18 +288,20 @@
   {% if records %}
   <div class="records-tiles">
     {% for c in records.day_categories %}
-    <div class="stat" title="{{ c.record_streak_range }}{% if c.record_count_date %} · record annual count set {{ c.record_count_date }}{% endif %}">
-      <span class="stat-label">{{ c.name }}</span>
-      <span class="stat-unit" data-i18n="records_record_current">record (current)</span>
-      <span class="stat-value-line">streak {{ c.record_streak_days }} <span class="{{ 'is-record' if c.current_streak_is_record }}">({{ c.current_streak_days }})</span></span>
-      <span class="stat-value-line">annual {{ c.record_count }} <span class="{{ 'is-record' if c.current_count_is_record }}">({{ c.current_count }})</span></span>
+    <div class="record-tile" style="--tile-accent: {{ c.accent }}"
+         title="{{ c.record_streak_range }}{% if c.record_count_date %} · record annual count set {{ c.record_count_date }}{% endif %}">
+      <div class="r-label">{{ c.name }}</div>
+      <div class="r-sub" data-i18n="records_record_current">record (current)</div>
+      <div class="r-value">streak {{ c.record_streak_days }} <span class="{{ 'is-record' if c.current_streak_is_record }}">({{ c.current_streak_days }})</span></div>
+      <div class="r-value">annual {{ c.record_count }} <span class="{{ 'is-record' if c.current_count_is_record }}">({{ c.current_count }})</span></div>
     </div>
     {% endfor %}
     {% for m in records.continuous_metrics %}
-    <div class="stat" title="lowest {{ m.lowest_date }} · highest {{ m.highest_date }}">
-      <span class="stat-label">{{ m.name }}</span>
-      <span class="stat-unit" data-i18n="records_min_curr_max">(min–curr–max)</span>
-      <span class="stat-value-line">{{ m.lowest }}{{ m.unit }} – {{ m.current }}{{ m.unit }} – {{ m.highest }}{{ m.unit }}</span>
+    <div class="record-tile" style="--tile-accent: {{ m.accent }}"
+         title="lowest {{ m.lowest_date }} · highest {{ m.highest_date }}">
+      <div class="r-label">{{ m.name }}</div>
+      <div class="r-sub" data-i18n="records_min_curr_max">(min–curr–max)</div>
+      <div class="r-value">{{ m.lowest }}{{ m.unit }} – {{ m.current }}{{ m.unit }} – {{ m.highest }}{{ m.unit }}</div>
     </div>
     {% endfor %}
   </div>

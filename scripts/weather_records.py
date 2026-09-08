@@ -66,7 +66,7 @@ def _fmt_date(d: pd.Timestamp | None) -> str | None:
     return d.strftime("%d %b %Y") if d is not None else None
 
 
-def _day_category(name: str, mask: pd.Series, chart_start: pd.Timestamp) -> dict:
+def _day_category(name: str, mask: pd.Series, chart_start: pd.Timestamp, accent: str) -> dict:
     streak_len, streak_start, streak_end = _longest_streak(mask)
     cur_streak = _current_streak(mask)
     is_streak_record = cur_streak > 0 and cur_streak >= streak_len
@@ -82,6 +82,7 @@ def _day_category(name: str, mask: pd.Series, chart_start: pd.Timestamp) -> dict
 
     return {
         "name": name,
+        "accent": accent,
         "record_streak_days": streak_len,
         "record_streak_range": (
             f"{_fmt_date(streak_start)} – {_fmt_date(streak_end)}" if streak_len else None
@@ -96,7 +97,7 @@ def _day_category(name: str, mask: pd.Series, chart_start: pd.Timestamp) -> dict
 
 
 def _continuous_metric(name: str, series: pd.Series, unit: str, agg: str,
-                        chart_start: pd.Timestamp) -> dict:
+                        chart_start: pd.Timestamp, accent: str) -> dict:
     """agg: 'mean' for temperature-style annual averages, 'sum' for totals
     (rainfall, sunshine) — both rolled here over the same 365-day window as
     chart_weather. 'prerolled' skips rolling entirely — for a series (like
@@ -114,9 +115,10 @@ def _continuous_metric(name: str, series: pd.Series, unit: str, agg: str,
             roll = roll * MOVAR
         roll = roll.dropna().loc[chart_start:]
     if len(roll) == 0:
-        return {"name": name, "unit": unit, "highest": None, "lowest": None, "current": None}
+        return {"name": name, "accent": accent, "unit": unit, "highest": None, "lowest": None, "current": None}
     return {
         "name": name,
+        "accent": accent,
         "unit": unit,
         "highest": round(roll.max(), 1),
         "highest_date": _fmt_date(roll.idxmax()),
@@ -130,26 +132,28 @@ def compute(weather_dwd: pd.DataFrame) -> dict:
     w = weather_dwd
     chart_start = w.index[0] + pd.Timedelta(days=MOVAR)
 
+    # Accent colors match chart_weather's own trace colors for each series,
+    # so a tile's left-border links visually to its line in the chart below.
     day_categories = [
-        _day_category("Ice days (Tmax < 0°C)",     w["tmax"] <= 0,        chart_start),
-        _day_category("Frost days (Tmin ≤ 0°C)",    w["tmin"] <= 0,        chart_start),
-        _day_category("Days ≥ 20°C",                w["tmax"] >= 20,       chart_start),
-        _day_category("Days ≥ 25°C",                w["tmax"] >= 25,       chart_start),
-        _day_category("Days ≥ 30°C",                w["tmax"] >= 30,       chart_start),
-        _day_category("Sunny days",                 _sunny_mask(w),       chart_start),
-        _day_category("Rainy days (> 5mm)",          w["rain"] > 5,        chart_start),
+        _day_category("Ice days (Tmax < 0°C)",     w["tmax"] <= 0,  chart_start, "#4C72B0"),
+        _day_category("Frost days (Tmin ≤ 0°C)",    w["tmin"] <= 0,  chart_start, "#64B5CD"),
+        _day_category("Days ≥ 20°C",                w["tmax"] >= 20, chart_start, "#64B5CD"),
+        _day_category("Days ≥ 25°C",                w["tmax"] >= 25, chart_start, "#55A868"),
+        _day_category("Days ≥ 30°C",                w["tmax"] >= 30, chart_start, "#C44E52"),
+        _day_category("Sunny days",                 _sunny_mask(w), chart_start, "#CCB974"),
+        _day_category("Rainy days (> 5mm)",          w["rain"] > 5,   chart_start, "#4C72B0"),
     ]
 
     rain_r = w["rain"].rolling(**ROLL_KW).mean().replace(0, np.nan)
     sun_rain_ratio = (w["sunshine"].rolling(**ROLL_KW).mean() / rain_r)
 
     continuous_metrics = [
-        _continuous_metric("Annual min. temperature",  w["tmin"], "°C", "mean", chart_start),
-        _continuous_metric("Annual mean temperature",  w["tmit"], "°C", "mean", chart_start),
-        _continuous_metric("Annual max. temperature",  w["tmax"], "°C", "mean", chart_start),
-        _continuous_metric("Annual rainfall",           w["rain"], "mm", "sum", chart_start),
-        _continuous_metric("Annual sunshine",           w["sunshine"], "h", "sum", chart_start),
-        _continuous_metric("Sunshine : Rain ratio",     sun_rain_ratio, "", "prerolled", chart_start),
+        _continuous_metric("Annual min. temperature",  w["tmin"], "°C", "mean", chart_start, "#64B5CD"),
+        _continuous_metric("Annual mean temperature",  w["tmit"], "°C", "mean", chart_start, "#55A868"),
+        _continuous_metric("Annual max. temperature",  w["tmax"], "°C", "mean", chart_start, "#C44E52"),
+        _continuous_metric("Annual rainfall",           w["rain"], "mm", "sum", chart_start, "#4C72B0"),
+        _continuous_metric("Annual sunshine",           w["sunshine"], "h", "sum", chart_start, "#CCB974"),
+        _continuous_metric("Sunshine : Rain ratio",     sun_rain_ratio, "", "prerolled", chart_start, "#8172B3"),
     ]
 
     return {"day_categories": day_categories, "continuous_metrics": continuous_metrics}
