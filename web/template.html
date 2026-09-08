@@ -181,45 +181,42 @@
     }
 
     .record-tile .r-hist {
-      margin-top: 0.55rem;
+      margin-top: 0.6rem;
       display: flex;
-      flex-direction: column;
-      gap: 0.3rem;
-    }
-    .r-hist-row {
-      display: flex;
-      align-items: center;
+      align-items: stretch;
       gap: 0.5rem;
     }
-    .r-hist-tag {
+    .r-hist-axis {
       flex: none;
-      width: 2.4em;
-      color: var(--subtext);
-      font-size: 0.68rem;
-      text-transform: uppercase;
-      letter-spacing: 0.03em;
-    }
-    .r-hist-track {
-      flex: 1 1 auto;
-      height: 8px;
-      background: rgba(255,255,255,0.08);
-      border-radius: 4px;
-      overflow: hidden;
-    }
-    .r-hist-bar {
-      display: block;
-      height: 100%;
-      background: var(--tile-accent, var(--accent));
-      border-radius: 4px;
-    }
-    .r-hist-val {
-      flex: none;
-      width: 3.6em;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
       text-align: right;
-      font-size: 0.78rem;
-      font-weight: 600;
-      color: var(--text);
+      font-size: 0.68rem;
+      color: var(--subtext);
       font-variant-numeric: tabular-nums;
+    }
+    .r-hist-bins {
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column-reverse;
+      gap: 1px;
+      height: 5.5rem;
+    }
+    .r-hist-bin {
+      flex: 1 1 0;
+      min-height: 2px;
+      border-radius: 0 2px 2px 0;
+      background: color-mix(in srgb, var(--tile-accent, var(--accent)) 35%, transparent);
+    }
+    .r-hist-bin.is-current {
+      background: var(--tile-accent, var(--accent));
+    }
+    .r-hist-current {
+      margin-top: 0.35rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--tile-accent, var(--accent));
     }
   </style>
 </head>
@@ -355,14 +352,17 @@
     <div class="record-tile" style="--tile-accent: {{ m.accent }}">
       <div class="r-label">{{ m.name }}</div>
       <div class="r-hist">
-        {% for bar in m.bars %}
-        <div class="r-hist-row">
-          <span class="r-hist-tag" data-i18n="records_tag_{{ bar.tag }}">{{ bar.tag }}</span>
-          <span class="r-hist-track"><span class="r-hist-bar" style="width: {{ bar.pct }}%"></span></span>
-          <span class="r-hist-val">{{ bar.value }}{{ m.unit }}</span>
+        <div class="r-hist-axis">
+          <div><span data-i18n="records_tag_max">max</span> {{ m.highest }}{{ m.unit }}</div>
+          <div><span data-i18n="records_tag_min">min</span> {{ m.lowest }}{{ m.unit }}</div>
         </div>
-        {% endfor %}
+        <div class="r-hist-bins">
+          {% for b in m.hist_bins %}
+          <span class="r-hist-bin{{ ' is-current' if b.is_current }}" style="width: {{ b.pct }}%"></span>
+          {% endfor %}
+        </div>
       </div>
+      <div class="r-hist-current"><span data-i18n="records_tag_curr">curr</span> {{ m.current }}{{ m.unit }}</div>
     </div>
     {% endfor %}
   </div>

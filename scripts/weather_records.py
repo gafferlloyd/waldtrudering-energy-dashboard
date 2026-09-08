@@ -116,24 +116,36 @@ def _continuous_metric(name: str, series: pd.Series, unit: str, agg: str,
         roll = roll.dropna().loc[chart_start:]
     if len(roll) == 0:
         return {"name": name, "accent": accent, "unit": unit, "highest": None, "lowest": None,
-                "current": None, "bars": []}
+                "current": None, "hist_bins": []}
 
     highest, lowest, current = roll.max(), roll.min(), roll.iloc[-1]
-    # Bars grow rightward from zero, each scaled against this metric's own
-    # highest value (not shared across metrics -- units/magnitudes differ
-    # too much for a common scale to mean anything).
-    scale = highest if highest > 0 else 1.0
-    bars = [
-        {"tag": "min",  "value": round(lowest, 1),  "pct": round(max(0.0, lowest)  / scale * 100, 1)},
-        {"tag": "curr", "value": round(current, 1), "pct": round(max(0.0, current) / scale * 100, 1)},
-        {"tag": "max",  "value": round(highest, 1), "pct": round(max(0.0, highest) / scale * 100, 1)},
-    ]
+
+    # A real distribution histogram of the metric's full rolling-annual
+    # history, not a 3-bar bar chart: N_BINS buckets spanning lowest..highest,
+    # each bar's length is that bucket's share of history (rightward from a
+    # y-axis of *value*, not the more usual upward-from-an-x-axis-of-value
+    # layout) -- built low-to-high so CSS can stack it bottom-up (min at the
+    # bottom, like a number line, matches how min/max naturally read).
+    N_BINS = 8
+    hist_bins = []
+    if highest > lowest:
+        edges = np.linspace(lowest, highest, N_BINS + 1)
+        counts, _ = np.histogram(roll.values, bins=edges)
+        max_count = counts.max() if counts.max() > 0 else 1
+        current_bin = min(int((current - lowest) / (highest - lowest) * N_BINS), N_BINS - 1)
+        for i, count in enumerate(counts):
+            hist_bins.append({
+                "pct": round(float(count) / max_count * 100, 1),
+                "is_current": i == current_bin,
+            })
+    else:
+        hist_bins = [{"pct": 100.0, "is_current": True}]
 
     return {
         "name": name,
         "accent": accent,
         "unit": unit,
-        "bars": bars,
+        "hist_bins": hist_bins,
         "highest": round(highest, 1),
         "highest_date": _fmt_date(roll.idxmax()),
         "lowest": round(lowest, 1),
