@@ -48,6 +48,20 @@
       flex-shrink: 0;
     }
 
+    .page-nav { display: flex; gap: 0.4rem; align-items: center; }
+    .page-nav a {
+      color: var(--text);
+      text-decoration: none;
+      font-size: 0.85rem;
+      padding: 0.25rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      opacity: 0.6;
+      transition: opacity 0.15s;
+    }
+    .page-nav a:hover  { opacity: 0.9; }
+    .page-nav a.active { opacity: 1; border-color: var(--accent); background: var(--overlay); }
+
     .lang-switcher { display: flex; gap: 0.2rem; align-items: center; }
     .lang-btn {
       background: none;
@@ -145,6 +159,10 @@
   <span class="meta" data-i18n-tpl="weather_through" data-date="{{ stats.weather_last_date }}">Weather through {{ stats.weather_last_date }}</span>
   <div class="header-right">
     <span class="meta" data-i18n-tpl="built_at" data-time="{{ stats.build_time }}">Built {{ stats.build_time }}</span>
+    <div class="page-nav">
+      <a href="index.html" class="{{ 'active' if page == 'energy' }}" data-i18n="nav_energy">Energy</a>
+      <a href="weather.html" class="{{ 'active' if page == 'weather' }}" data-i18n="nav_weather">Weather</a>
+    </div>
     <div class="lang-switcher">
       <button class="lang-btn" data-lang="en" title="English">🇬🇧</button>
       <button class="lang-btn" data-lang="de" title="Deutsch">🇩🇪</button>
@@ -153,6 +171,7 @@
   </div>
 </header>
 
+{% if page == 'energy' %}
 <div class="stats-bar">
   <div class="stat">
     <span class="stat-label" data-i18n="gas_daily_label">Gas — daily / 7d avg</span>
@@ -231,6 +250,7 @@
   <button class="time-btn" data-range="3yr" data-i18n="btn_3yr">3 years</button>
   <button class="time-btn" data-range="1yr" data-i18n="btn_1yr">1 year</button>
 </div>
+{% endif %}
 
 <main>
   <div class="chart-grid">
@@ -341,6 +361,7 @@
     en: {
       site_title: "81827 Waldtrudering Energy Dashboard",
       meter_through: "Meter through", weather_through: "Weather through", built_at: "Built",
+      nav_energy: "Energy", nav_weather: "Weather",
       btn_all: "All time", btn_3yr: "3 years", btn_1yr: "1 year",
       gas_daily_label:   "Gas — daily / 7d avg",
       gas_annual_label:  "Gas — annual",
@@ -376,6 +397,7 @@
     de: {
       site_title: "81827 Waldtrudering Energie-Dashboard",
       meter_through: "Zähler bis", weather_through: "Wetter bis", built_at: "Erstellt",
+      nav_energy: "Energie", nav_weather: "Wetter",
       btn_all: "Gesamt", btn_3yr: "3 Jahre", btn_1yr: "1 Jahr",
       gas_daily_label:   "Gas — täglich / 7T-Ø",
       gas_annual_label:  "Gas — jährlich",
@@ -411,6 +433,7 @@
     it: {
       site_title: "81827 Waldtrudering Dashboard Energetico",
       meter_through: "Contatori al", weather_through: "Meteo al", built_at: "Creato",
+      nav_energy: "Energia", nav_weather: "Meteo",
       btn_all: "Tutto", btn_3yr: "3 anni", btn_1yr: "1 anno",
       gas_daily_label:   "Gas — giorn. / media 7g",
       gas_annual_label:  "Gas — annuale",

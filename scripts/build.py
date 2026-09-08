@@ -176,20 +176,28 @@ def main():
         stats["pv_not_captured_pct"] = None
 
     # ── 5. Render HTML ────────────────────────────────────────────────────────
+    # Weather Overview lives on its own page — everything else stays on the
+    # main energy dashboard.
     print("Step 4: Rendering HTML…")
-    html = render_html(charts, stats)
+    weather_charts = [c for c in charts if c["id"] == "chart_weather"]
+    main_charts    = [c for c in charts if c["id"] != "chart_weather"]
 
-    out_path = output_dir / "index.html"
-    out_path.write_text(html, encoding="utf-8")
-    print(f"  Written: {out_path}  ({out_path.stat().st_size:,} bytes)")
+    for page, page_charts, filename in [
+        ("energy",  main_charts,    "index.html"),
+        ("weather", weather_charts, "weather.html"),
+    ]:
+        html = render_html(page_charts, stats, page=page)
+        out_path = output_dir / filename
+        out_path.write_text(html, encoding="utf-8")
+        print(f"  Written: {out_path}  ({out_path.stat().st_size:,} bytes)")
     print("Done.")
 
 
-def render_html(charts: list[dict], stats: dict) -> str:
+def render_html(charts: list[dict], stats: dict, page: str = "energy") -> str:
     from jinja2 import Environment, FileSystemLoader
     env = Environment(loader=FileSystemLoader(str(ROOT / "web")))
     template = env.get_template("template.html")
-    return template.render(charts=charts, stats=stats)
+    return template.render(charts=charts, stats=stats, page=page)
 
 
 if __name__ == "__main__":
