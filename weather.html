@@ -181,45 +181,42 @@
     }
 
     .record-tile .r-hist {
-      margin-top: 0.55rem;
+      margin-top: 0.6rem;
       display: flex;
-      flex-direction: column;
-      gap: 0.3rem;
-    }
-    .r-hist-row {
-      display: flex;
-      align-items: center;
+      align-items: stretch;
       gap: 0.5rem;
     }
-    .r-hist-tag {
+    .r-hist-axis {
       flex: none;
-      width: 2.4em;
-      color: var(--subtext);
-      font-size: 0.68rem;
-      text-transform: uppercase;
-      letter-spacing: 0.03em;
-    }
-    .r-hist-track {
-      flex: 1 1 auto;
-      height: 8px;
-      background: rgba(255,255,255,0.08);
-      border-radius: 4px;
-      overflow: hidden;
-    }
-    .r-hist-bar {
-      display: block;
-      height: 100%;
-      background: var(--tile-accent, var(--accent));
-      border-radius: 4px;
-    }
-    .r-hist-val {
-      flex: none;
-      width: 3.6em;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
       text-align: right;
-      font-size: 0.78rem;
-      font-weight: 600;
-      color: var(--text);
+      font-size: 0.68rem;
+      color: var(--subtext);
       font-variant-numeric: tabular-nums;
+    }
+    .r-hist-bins {
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column-reverse;
+      gap: 1px;
+      height: 5.5rem;
+    }
+    .r-hist-bin {
+      flex: 1 1 0;
+      min-height: 2px;
+      border-radius: 0 2px 2px 0;
+      background: color-mix(in srgb, var(--tile-accent, var(--accent)) 35%, transparent);
+    }
+    .r-hist-bin.is-current {
+      background: var(--tile-accent, var(--accent));
+    }
+    .r-hist-current {
+      margin-top: 0.35rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--tile-accent, var(--accent));
     }
   </style>
 </head>
@@ -232,7 +229,7 @@
   <span class="meta" data-i18n-tpl="meter_through" data-date="07 Sep 2026">Meter through 07 Sep 2026</span>
   <span class="meta" data-i18n-tpl="weather_through" data-date="07 Sep 2026">Weather through 07 Sep 2026</span>
   <div class="header-right">
-    <span class="meta" data-i18n-tpl="built_at" data-time="2026-09-08 14:55 UTC">Built 2026-09-08 14:55 UTC</span>
+    <span class="meta" data-i18n-tpl="built_at" data-time="2026-09-08 17:31 UTC">Built 2026-09-08 17:31 UTC</span>
     <div class="page-nav">
       <a href="index.html" class="" data-i18n="nav_energy">Energy</a>
       <a href="weather.html" class="active" data-i18n="nav_weather">Weather</a>
@@ -319,151 +316,181 @@
     <div class="record-tile" style="--tile-accent: #64B5CD">
       <div class="r-label">Annual min. temperature</div>
       <div class="r-hist">
-        
-        <div class="r-hist-row">
-          <span class="r-hist-tag" data-i18n="records_tag_min">min</span>
-          <span class="r-hist-track"><span class="r-hist-bar" style="width: 43.7%"></span></span>
-          <span class="r-hist-val">2.6°C</span>
+        <div class="r-hist-axis">
+          <div><span data-i18n="records_tag_max">max</span> 5.9°C</div>
+          <div><span data-i18n="records_tag_min">min</span> 2.6°C</div>
         </div>
-        
-        <div class="r-hist-row">
-          <span class="r-hist-tag" data-i18n="records_tag_curr">curr</span>
-          <span class="r-hist-track"><span class="r-hist-bar" style="width: 69.1%"></span></span>
-          <span class="r-hist-val">4.1°C</span>
+        <div class="r-hist-bins">
+          
+          <span class="r-hist-bin" style="width: 2.6%"></span>
+          
+          <span class="r-hist-bin" style="width: 18.7%"></span>
+          
+          <span class="r-hist-bin" style="width: 59.1%"></span>
+          
+          <span class="r-hist-bin is-current" style="width: 79.1%"></span>
+          
+          <span class="r-hist-bin" style="width: 100.0%"></span>
+          
+          <span class="r-hist-bin" style="width: 52.5%"></span>
+          
+          <span class="r-hist-bin" style="width: 22.3%"></span>
+          
+          <span class="r-hist-bin" style="width: 12.0%"></span>
+          
         </div>
-        
-        <div class="r-hist-row">
-          <span class="r-hist-tag" data-i18n="records_tag_max">max</span>
-          <span class="r-hist-track"><span class="r-hist-bar" style="width: 100.0%"></span></span>
-          <span class="r-hist-val">5.9°C</span>
-        </div>
-        
       </div>
+      <div class="r-hist-current"><span data-i18n="records_tag_curr">curr</span> 4.1°C</div>
     </div>
     
     <div class="record-tile" style="--tile-accent: #55A868">
       <div class="r-label">Annual mean temperature</div>
       <div class="r-hist">
-        
-        <div class="r-hist-row">
-          <span class="r-hist-tag" data-i18n="records_tag_min">min</span>
-          <span class="r-hist-track"><span class="r-hist-bar" style="width: 62.2%"></span></span>
-          <span class="r-hist-val">7.0°C</span>
+        <div class="r-hist-axis">
+          <div><span data-i18n="records_tag_max">max</span> 11.2°C</div>
+          <div><span data-i18n="records_tag_min">min</span> 7.0°C</div>
         </div>
-        
-        <div class="r-hist-row">
-          <span class="r-hist-tag" data-i18n="records_tag_curr">curr</span>
-          <span class="r-hist-track"><span class="r-hist-bar" style="width: 90.1%"></span></span>
-          <span class="r-hist-val">10.1°C</span>
+        <div class="r-hist-bins">
+          
+          <span class="r-hist-bin" style="width: 5.4%"></span>
+          
+          <span class="r-hist-bin" style="width: 9.8%"></span>
+          
+          <span class="r-hist-bin" style="width: 21.8%"></span>
+          
+          <span class="r-hist-bin" style="width: 78.9%"></span>
+          
+          <span class="r-hist-bin" style="width: 100.0%"></span>
+          
+          <span class="r-hist-bin is-current" style="width: 70.4%"></span>
+          
+          <span class="r-hist-bin" style="width: 23.8%"></span>
+          
+          <span class="r-hist-bin" style="width: 13.6%"></span>
+          
         </div>
-        
-        <div class="r-hist-row">
-          <span class="r-hist-tag" data-i18n="records_tag_max">max</span>
-          <span class="r-hist-track"><span class="r-hist-bar" style="width: 100.0%"></span></span>
-          <span class="r-hist-val">11.2°C</span>
-        </div>
-        
       </div>
+      <div class="r-hist-current"><span data-i18n="records_tag_curr">curr</span> 10.1°C</div>
     </div>
     
     <div class="record-tile" style="--tile-accent: #C44E52">
       <div class="r-label">Annual max. temperature</div>
       <div class="r-hist">
-        
-        <div class="r-hist-row">
-          <span class="r-hist-tag" data-i18n="records_tag_min">min</span>
-          <span class="r-hist-track"><span class="r-hist-bar" style="width: 66.7%"></span></span>
-          <span class="r-hist-val">11.2°C</span>
+        <div class="r-hist-axis">
+          <div><span data-i18n="records_tag_max">max</span> 16.7°C</div>
+          <div><span data-i18n="records_tag_min">min</span> 11.2°C</div>
         </div>
-        
-        <div class="r-hist-row">
-          <span class="r-hist-tag" data-i18n="records_tag_curr">curr</span>
-          <span class="r-hist-track"><span class="r-hist-bar" style="width: 93.0%"></span></span>
-          <span class="r-hist-val">15.6°C</span>
+        <div class="r-hist-bins">
+          
+          <span class="r-hist-bin" style="width: 9.6%"></span>
+          
+          <span class="r-hist-bin" style="width: 12.9%"></span>
+          
+          <span class="r-hist-bin" style="width: 41.5%"></span>
+          
+          <span class="r-hist-bin" style="width: 100.0%"></span>
+          
+          <span class="r-hist-bin" style="width: 92.0%"></span>
+          
+          <span class="r-hist-bin" style="width: 74.7%"></span>
+          
+          <span class="r-hist-bin is-current" style="width: 39.8%"></span>
+          
+          <span class="r-hist-bin" style="width: 10.2%"></span>
+          
         </div>
-        
-        <div class="r-hist-row">
-          <span class="r-hist-tag" data-i18n="records_tag_max">max</span>
-          <span class="r-hist-track"><span class="r-hist-bar" style="width: 100.0%"></span></span>
-          <span class="r-hist-val">16.7°C</span>
-        </div>
-        
       </div>
+      <div class="r-hist-current"><span data-i18n="records_tag_curr">curr</span> 15.6°C</div>
     </div>
     
     <div class="record-tile" style="--tile-accent: #4C72B0">
       <div class="r-label">Annual rainfall</div>
       <div class="r-hist">
-        
-        <div class="r-hist-row">
-          <span class="r-hist-tag" data-i18n="records_tag_min">min</span>
-          <span class="r-hist-track"><span class="r-hist-bar" style="width: 38.6%"></span></span>
-          <span class="r-hist-val">488.6mm</span>
+        <div class="r-hist-axis">
+          <div><span data-i18n="records_tag_max">max</span> 1264.7mm</div>
+          <div><span data-i18n="records_tag_min">min</span> 488.6mm</div>
         </div>
-        
-        <div class="r-hist-row">
-          <span class="r-hist-tag" data-i18n="records_tag_curr">curr</span>
-          <span class="r-hist-track"><span class="r-hist-bar" style="width: 45.3%"></span></span>
-          <span class="r-hist-val">573.5mm</span>
+        <div class="r-hist-bins">
+          
+          <span class="r-hist-bin is-current" style="width: 4.6%"></span>
+          
+          <span class="r-hist-bin" style="width: 45.2%"></span>
+          
+          <span class="r-hist-bin" style="width: 100.0%"></span>
+          
+          <span class="r-hist-bin" style="width: 54.3%"></span>
+          
+          <span class="r-hist-bin" style="width: 24.6%"></span>
+          
+          <span class="r-hist-bin" style="width: 5.0%"></span>
+          
+          <span class="r-hist-bin" style="width: 1.4%"></span>
+          
+          <span class="r-hist-bin" style="width: 1.2%"></span>
+          
         </div>
-        
-        <div class="r-hist-row">
-          <span class="r-hist-tag" data-i18n="records_tag_max">max</span>
-          <span class="r-hist-track"><span class="r-hist-bar" style="width: 100.0%"></span></span>
-          <span class="r-hist-val">1264.7mm</span>
-        </div>
-        
       </div>
+      <div class="r-hist-current"><span data-i18n="records_tag_curr">curr</span> 573.5mm</div>
     </div>
     
     <div class="record-tile" style="--tile-accent: #CCB974">
       <div class="r-label">Annual sunshine</div>
       <div class="r-hist">
-        
-        <div class="r-hist-row">
-          <span class="r-hist-tag" data-i18n="records_tag_min">min</span>
-          <span class="r-hist-track"><span class="r-hist-bar" style="width: 62.6%"></span></span>
-          <span class="r-hist-val">1434.8h</span>
+        <div class="r-hist-axis">
+          <div><span data-i18n="records_tag_max">max</span> 2291.7h</div>
+          <div><span data-i18n="records_tag_min">min</span> 1434.8h</div>
         </div>
-        
-        <div class="r-hist-row">
-          <span class="r-hist-tag" data-i18n="records_tag_curr">curr</span>
-          <span class="r-hist-track"><span class="r-hist-bar" style="width: 90.4%"></span></span>
-          <span class="r-hist-val">2071.3h</span>
+        <div class="r-hist-bins">
+          
+          <span class="r-hist-bin" style="width: 7.8%"></span>
+          
+          <span class="r-hist-bin" style="width: 46.8%"></span>
+          
+          <span class="r-hist-bin" style="width: 67.2%"></span>
+          
+          <span class="r-hist-bin" style="width: 83.4%"></span>
+          
+          <span class="r-hist-bin" style="width: 100.0%"></span>
+          
+          <span class="r-hist-bin is-current" style="width: 68.8%"></span>
+          
+          <span class="r-hist-bin" style="width: 41.8%"></span>
+          
+          <span class="r-hist-bin" style="width: 22.2%"></span>
+          
         </div>
-        
-        <div class="r-hist-row">
-          <span class="r-hist-tag" data-i18n="records_tag_max">max</span>
-          <span class="r-hist-track"><span class="r-hist-bar" style="width: 100.0%"></span></span>
-          <span class="r-hist-val">2291.7h</span>
-        </div>
-        
       </div>
+      <div class="r-hist-current"><span data-i18n="records_tag_curr">curr</span> 2071.3h</div>
     </div>
     
     <div class="record-tile" style="--tile-accent: #8172B3">
       <div class="r-label">Sunshine : Rain ratio</div>
       <div class="r-hist">
-        
-        <div class="r-hist-row">
-          <span class="r-hist-tag" data-i18n="records_tag_min">min</span>
-          <span class="r-hist-track"><span class="r-hist-bar" style="width: 32.1%"></span></span>
-          <span class="r-hist-val">1.5</span>
+        <div class="r-hist-axis">
+          <div><span data-i18n="records_tag_max">max</span> 4.6</div>
+          <div><span data-i18n="records_tag_min">min</span> 1.5</div>
         </div>
-        
-        <div class="r-hist-row">
-          <span class="r-hist-tag" data-i18n="records_tag_curr">curr</span>
-          <span class="r-hist-track"><span class="r-hist-bar" style="width: 78.9%"></span></span>
-          <span class="r-hist-val">3.6</span>
+        <div class="r-hist-bins">
+          
+          <span class="r-hist-bin" style="width: 25.5%"></span>
+          
+          <span class="r-hist-bin" style="width: 82.0%"></span>
+          
+          <span class="r-hist-bin" style="width: 100.0%"></span>
+          
+          <span class="r-hist-bin" style="width: 86.7%"></span>
+          
+          <span class="r-hist-bin" style="width: 36.1%"></span>
+          
+          <span class="r-hist-bin is-current" style="width: 9.8%"></span>
+          
+          <span class="r-hist-bin" style="width: 2.5%"></span>
+          
+          <span class="r-hist-bin" style="width: 0.6%"></span>
+          
         </div>
-        
-        <div class="r-hist-row">
-          <span class="r-hist-tag" data-i18n="records_tag_max">max</span>
-          <span class="r-hist-track"><span class="r-hist-bar" style="width: 100.0%"></span></span>
-          <span class="r-hist-val">4.6</span>
-        </div>
-        
       </div>
+      <div class="r-hist-current"><span data-i18n="records_tag_curr">curr</span> 3.6</div>
     </div>
     
   </div>
