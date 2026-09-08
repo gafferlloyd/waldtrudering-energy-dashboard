@@ -728,6 +728,7 @@ def chart_weather(daily: pd.DataFrame, weather_dwd: pd.DataFrame | None = None) 
     w = weather_dwd if weather_dwd is not None else daily
 
     fig = make_subplots(rows=6, cols=1, shared_xaxes=True,
+                        vertical_spacing=0.02,
                         subplot_titles=(
                             "Temperatures (annual avg)",
                             "Sunny & Rainy Days",
@@ -868,7 +869,7 @@ def chart_weather(daily: pd.DataFrame, weather_dwd: pd.DataFrame | None = None) 
 
     fig.update_layout(
         title="Weather Overview (rolling annual)  ·  dotted = 1992–2021 mean",
-        height=2700,
+        height=3000,
     )
     return fig
 
