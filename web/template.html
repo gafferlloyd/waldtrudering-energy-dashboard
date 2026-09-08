@@ -174,6 +174,53 @@
     }
     .record-tile .r-value + .r-value { margin-top: 0.2rem; }
     .record-tile .is-record { color: var(--green); }
+
+    .legend-tile {
+      border-left: 4px dashed var(--subtext);
+      opacity: 0.85;
+    }
+
+    .record-tile .r-hist {
+      margin-top: 0.55rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+    .r-hist-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .r-hist-tag {
+      flex: none;
+      width: 2.4em;
+      color: var(--subtext);
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .r-hist-track {
+      flex: 1 1 auto;
+      height: 8px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .r-hist-bar {
+      display: block;
+      height: 100%;
+      background: var(--tile-accent, var(--accent));
+      border-radius: 4px;
+    }
+    .r-hist-val {
+      flex: none;
+      width: 3.6em;
+      text-align: right;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
   </style>
 </head>
 <body>
@@ -287,21 +334,35 @@
 <main>
   {% if records %}
   <div class="records-tiles">
+    <div class="record-tile legend-tile">
+      <div class="r-label" data-i18n="records_legend_parameter">Parameter</div>
+      <div class="r-sub" data-i18n="records_record_current">record (current)</div>
+      <div class="r-value" data-i18n="records_legend_streak">streak</div>
+      <div class="r-value" data-i18n="records_legend_annual">annual</div>
+    </div>
     {% for c in records.day_categories %}
     <div class="record-tile" style="--tile-accent: {{ c.accent }}"
          title="{{ c.record_streak_range }}{% if c.record_count_date %} · record annual count set {{ c.record_count_date }}{% endif %}">
       <div class="r-label">{{ c.name }}</div>
-      <div class="r-sub" data-i18n="records_record_current">record (current)</div>
-      <div class="r-value">streak {{ c.record_streak_days }} <span class="{{ 'is-record' if c.current_streak_is_record }}">({{ c.current_streak_days }})</span></div>
-      <div class="r-value">annual {{ c.record_count }} <span class="{{ 'is-record' if c.current_count_is_record }}">({{ c.current_count }})</span></div>
+      <div class="r-value">{{ c.record_streak_days }} <span class="{{ 'is-record' if c.current_streak_is_record }}">({{ c.current_streak_days }})</span></div>
+      <div class="r-value">{{ c.record_count }} <span class="{{ 'is-record' if c.current_count_is_record }}">({{ c.current_count }})</span></div>
     </div>
     {% endfor %}
+  </div>
+
+  <div class="records-tiles">
     {% for m in records.continuous_metrics %}
-    <div class="record-tile" style="--tile-accent: {{ m.accent }}"
-         title="lowest {{ m.lowest_date }} · highest {{ m.highest_date }}">
+    <div class="record-tile" style="--tile-accent: {{ m.accent }}">
       <div class="r-label">{{ m.name }}</div>
-      <div class="r-sub" data-i18n="records_min_curr_max">(min–curr–max)</div>
-      <div class="r-value">{{ m.lowest }}{{ m.unit }} – {{ m.current }}{{ m.unit }} – {{ m.highest }}{{ m.unit }}</div>
+      <div class="r-hist">
+        {% for bar in m.bars %}
+        <div class="r-hist-row">
+          <span class="r-hist-tag" data-i18n="records_tag_{{ bar.tag }}">{{ bar.tag }}</span>
+          <span class="r-hist-track"><span class="r-hist-bar" style="width: {{ bar.pct }}%"></span></span>
+          <span class="r-hist-val">{{ bar.value }}{{ m.unit }}</span>
+        </div>
+        {% endfor %}
+      </div>
     </div>
     {% endfor %}
   </div>
@@ -417,7 +478,8 @@
       meter_through: "Meter through", weather_through: "Weather through", built_at: "Built",
       nav_energy: "Energy", nav_weather: "Weather",
       records_record_current: "record (current)",
-      records_min_curr_max: "(min–curr–max)",
+      records_legend_parameter: "Parameter", records_legend_streak: "streak", records_legend_annual: "annual",
+      records_tag_min: "min", records_tag_curr: "curr", records_tag_max: "max",
       btn_all: "All time", btn_3yr: "3 years", btn_1yr: "1 year",
       gas_daily_label:   "Gas — daily / 7d avg",
       gas_annual_label:  "Gas — annual",
@@ -455,7 +517,8 @@
       meter_through: "Zähler bis", weather_through: "Wetter bis", built_at: "Erstellt",
       nav_energy: "Energie", nav_weather: "Wetter",
       records_record_current: "Rekord (aktuell)",
-      records_min_curr_max: "(min–akt–max)",
+      records_legend_parameter: "Parameter", records_legend_streak: "Serie", records_legend_annual: "jährlich",
+      records_tag_min: "min", records_tag_curr: "akt", records_tag_max: "max",
       btn_all: "Gesamt", btn_3yr: "3 Jahre", btn_1yr: "1 Jahr",
       gas_daily_label:   "Gas — täglich / 7T-Ø",
       gas_annual_label:  "Gas — jährlich",
@@ -493,7 +556,8 @@
       meter_through: "Contatori al", weather_through: "Meteo al", built_at: "Creato",
       nav_energy: "Energia", nav_weather: "Meteo",
       records_record_current: "record (attuale)",
-      records_min_curr_max: "(min–att–max)",
+      records_legend_parameter: "Parametro", records_legend_streak: "serie", records_legend_annual: "annuale",
+      records_tag_min: "min", records_tag_curr: "att", records_tag_max: "max",
       btn_all: "Tutto", btn_3yr: "3 anni", btn_1yr: "1 anno",
       gas_daily_label:   "Gas — giorn. / media 7g",
       gas_annual_label:  "Gas — annuale",

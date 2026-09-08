@@ -115,16 +115,30 @@ def _continuous_metric(name: str, series: pd.Series, unit: str, agg: str,
             roll = roll * MOVAR
         roll = roll.dropna().loc[chart_start:]
     if len(roll) == 0:
-        return {"name": name, "accent": accent, "unit": unit, "highest": None, "lowest": None, "current": None}
+        return {"name": name, "accent": accent, "unit": unit, "highest": None, "lowest": None,
+                "current": None, "bars": []}
+
+    highest, lowest, current = roll.max(), roll.min(), roll.iloc[-1]
+    # Bars grow rightward from zero, each scaled against this metric's own
+    # highest value (not shared across metrics -- units/magnitudes differ
+    # too much for a common scale to mean anything).
+    scale = highest if highest > 0 else 1.0
+    bars = [
+        {"tag": "min",  "value": round(lowest, 1),  "pct": round(max(0.0, lowest)  / scale * 100, 1)},
+        {"tag": "curr", "value": round(current, 1), "pct": round(max(0.0, current) / scale * 100, 1)},
+        {"tag": "max",  "value": round(highest, 1), "pct": round(max(0.0, highest) / scale * 100, 1)},
+    ]
+
     return {
         "name": name,
         "accent": accent,
         "unit": unit,
-        "highest": round(roll.max(), 1),
+        "bars": bars,
+        "highest": round(highest, 1),
         "highest_date": _fmt_date(roll.idxmax()),
-        "lowest": round(roll.min(), 1),
+        "lowest": round(lowest, 1),
         "lowest_date": _fmt_date(roll.idxmin()),
-        "current": round(roll.iloc[-1], 1),
+        "current": round(current, 1),
     }
 
 
