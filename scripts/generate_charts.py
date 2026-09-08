@@ -727,7 +727,7 @@ def chart_weather(daily: pd.DataFrame, weather_dwd: pd.DataFrame | None = None) 
     # the meter data starts in 2016. Fall back to daily if not available.
     w = weather_dwd if weather_dwd is not None else daily
 
-    fig = make_subplots(rows=3, cols=2, shared_xaxes=False,
+    fig = make_subplots(rows=6, cols=1, shared_xaxes=True,
                         subplot_titles=(
                             "Temperatures (annual avg)",
                             "Sunny & Rainy Days",
@@ -786,21 +786,21 @@ def chart_weather(daily: pd.DataFrame, weather_dwd: pd.DataFrame | None = None) 
                                  line=dict(color=clr), showlegend=True), row=1, col=1)
         fig.add_hline(y=refs[col], line_color=clr, **REF_STYLE, row=1, col=1)
 
-    # Row 1 col 2 — sunny & heavy rain days
+    # Row 2 — sunny & heavy rain days
     for series, name, clr, rk in [(sunny.astype(float), "Sunny", "#CCB974", "sunny"),
                                    ((w["rain"] > 5).astype(float), "Hvy Rain", "#4C72B0", "heavy_rain")]:
         s = (roll(series) * movar).dropna()
         fig.add_trace(go.Scatter(x=s.index, y=s.values, name=name,
-                                 line=dict(color=clr), showlegend=True), row=1, col=2)
-        fig.add_hline(y=refs[rk], line_color=clr, **REF_STYLE, row=1, col=2)
+                                 line=dict(color=clr), showlegend=True), row=2, col=1)
+        fig.add_hline(y=refs[rk], line_color=clr, **REF_STYLE, row=2, col=1)
 
-    # Row 2 col 1 — annual rainfall & sunshine
+    # Row 3 — annual rainfall & sunshine
     for series, name, clr, rk in [(w["rain"], "Rainfall mm", "#4C72B0", "rainfall"),
                                    (w["sunshine"], "Sunshine hrs", "#CCB974", "sunshine")]:
         s = (roll(series) * movar).dropna()
         fig.add_trace(go.Scatter(x=s.index, y=s.values, name=name,
-                                 line=dict(color=clr), showlegend=True), row=2, col=1)
-        fig.add_hline(y=refs[rk], line_color=clr, **REF_STYLE, row=2, col=1)
+                                 line=dict(color=clr), showlegend=True), row=3, col=1)
+        fig.add_hline(y=refs[rk], line_color=clr, **REF_STYLE, row=3, col=1)
 
     # Sunshine sensor outage: DWD's own sensor (SDK) can go dark for a stretch.
     # process.py backfills those dates from LMU Munich-city so the main line
@@ -823,7 +823,7 @@ def chart_weather(daily: pd.DataFrame, weather_dwd: pd.DataFrame | None = None) 
                 line=dict(color="#CCB974", dash="dash", width=1.5),
                 opacity=0.6,
                 showlegend=True,
-            ), row=2, col=1)
+            ), row=3, col=1)
     elif len(sun_raw) > 0 and len(sun_roll) > 0:
         # Deeper fallback: no city backfill available either (e.g. cache not
         # yet fetched) — flat "same as last year" guess, same as before.
@@ -842,33 +842,33 @@ def chart_weather(daily: pd.DataFrame, weather_dwd: pd.DataFrame | None = None) 
                     line=dict(color="#CCB974", dash="dash", width=1.5),
                     opacity=0.6,
                     showlegend=True,
-                ), row=2, col=1)
+                ), row=3, col=1)
 
-    # Row 2 col 2 — warm/hot days
+    # Row 4 — warm/hot days
     for thr, name, clr, rk in [(20,">20°C","#64B5CD","d20"),(25,">25°C","#55A868","d25"),(30,">30°C","#C44E52","d30")]:
         s = (roll((w["tmax"] >= thr).astype(float)) * movar).dropna()
         fig.add_trace(go.Scatter(x=s.index, y=s.values, name=name,
-                                 line=dict(color=clr), showlegend=True), row=2, col=2)
-        fig.add_hline(y=refs[rk], line_color=clr, **REF_STYLE, row=2, col=2)
+                                 line=dict(color=clr), showlegend=True), row=4, col=1)
+        fig.add_hline(y=refs[rk], line_color=clr, **REF_STYLE, row=4, col=1)
 
-    # Row 3 col 1 — frost & ice
+    # Row 5 — frost & ice
     for series, name, clr, rk in [((w["tmin"] <= 0).astype(float), "Frost days", "#64B5CD", "frost"),
                                    ((w["tmax"] <= 0).astype(float), "Ice days",   "#4C72B0", "ice")]:
         s = (roll(series) * movar).dropna()
         fig.add_trace(go.Scatter(x=s.index, y=s.values, name=name,
-                                 line=dict(color=clr), showlegend=True), row=3, col=1)
-        fig.add_hline(y=refs[rk], line_color=clr, **REF_STYLE, row=3, col=1)
+                                 line=dict(color=clr), showlegend=True), row=5, col=1)
+        fig.add_hline(y=refs[rk], line_color=clr, **REF_STYLE, row=5, col=1)
 
-    # Row 3 col 2 — sunshine:rain ratio
+    # Row 6 — sunshine:rain ratio
     rain_r = roll(w["rain"]).replace(0, np.nan)
     ratio  = (roll(w["sunshine"]) / rain_r).dropna()
     fig.add_trace(go.Scatter(x=ratio.index, y=ratio.values, name="Sun:Rain",
-                             line=dict(color=_PALETTE[4]), showlegend=True), row=3, col=2)
-    fig.add_hline(y=refs["sun_rain"], line_color=_PALETTE[4], **REF_STYLE, row=3, col=2)
+                             line=dict(color=_PALETTE[4]), showlegend=True), row=6, col=1)
+    fig.add_hline(y=refs["sun_rain"], line_color=_PALETTE[4], **REF_STYLE, row=6, col=1)
 
     fig.update_layout(
         title="Weather Overview (rolling annual)  ·  dotted = 1992–2021 mean",
-        height=850,
+        height=1700,
     )
     return fig
 

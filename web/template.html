@@ -244,13 +244,13 @@
   </div>
   {% endif %}
 </div>
+{% endif %}
 
 <div class="timerange-bar">
   <button class="time-btn active" data-range="all" data-i18n="btn_all">All time</button>
   <button class="time-btn" data-range="3yr" data-i18n="btn_3yr">3 years</button>
   <button class="time-btn" data-range="1yr" data-i18n="btn_1yr">1 year</button>
 </div>
-{% endif %}
 
 <main>
   <div class="chart-grid">
@@ -320,7 +320,7 @@
   // ── Time-range buttons ────────────────────────────────────────────────────
   const DATE_CHART_IDS = [
     'chart_gas', 'chart_elec', 'chart_water', 'chart_pv_system',
-    'chart_efficiency', 'chart_eff_trend', 'chart_cost'
+    'chart_efficiency', 'chart_eff_trend', 'chart_cost', 'chart_weather'
   ];
   const LAST_DATE_ISO = '{{ stats.last_date_iso }}';
 
