@@ -70,6 +70,9 @@ def main():
     charts = generate_charts.build_all(data)
     print(f"  {len(charts)} charts generated")
 
+    import weather_records
+    records = weather_records.compute(data["weather_dwd"])
+
     # ── 4. Summary stats ──────────────────────────────────────────────────────
     cfg = data["config"]
 
@@ -182,22 +185,22 @@ def main():
     weather_charts = [c for c in charts if c["id"] == "chart_weather"]
     main_charts    = [c for c in charts if c["id"] != "chart_weather"]
 
-    for page, page_charts, filename in [
-        ("energy",  main_charts,    "index.html"),
-        ("weather", weather_charts, "weather.html"),
+    for page, page_charts, filename, page_records in [
+        ("energy",  main_charts,    "index.html",   None),
+        ("weather", weather_charts, "weather.html", records),
     ]:
-        html = render_html(page_charts, stats, page=page)
+        html = render_html(page_charts, stats, page=page, records=page_records)
         out_path = output_dir / filename
         out_path.write_text(html, encoding="utf-8")
         print(f"  Written: {out_path}  ({out_path.stat().st_size:,} bytes)")
     print("Done.")
 
 
-def render_html(charts: list[dict], stats: dict, page: str = "energy") -> str:
+def render_html(charts: list[dict], stats: dict, page: str = "energy", records: dict | None = None) -> str:
     from jinja2 import Environment, FileSystemLoader
     env = Environment(loader=FileSystemLoader(str(ROOT / "web")))
     template = env.get_template("template.html")
-    return template.render(charts=charts, stats=stats, page=page)
+    return template.render(charts=charts, stats=stats, page=page, records=records)
 
 
 if __name__ == "__main__":

@@ -868,7 +868,7 @@ def chart_weather(daily: pd.DataFrame, weather_dwd: pd.DataFrame | None = None) 
 
     fig.update_layout(
         title="Weather Overview (rolling annual)  ·  dotted = 1992–2021 mean",
-        height=1700,
+        height=2700,
     )
     return fig
 

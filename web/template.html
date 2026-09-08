@@ -142,6 +142,55 @@
     }
     .chart-card.full-width { grid-column: 1 / -1; }
     .chart-card .plotly-graph-div { width: 100% !important; }
+
+    .records-section { margin-bottom: 1.75rem; }
+    .records-section h2 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--accent);
+      margin: 1.25rem 0 0.5rem;
+    }
+    .records-section h2:first-child { margin-top: 0; }
+    .table-scroll { overflow-x: auto; }
+    .records-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      font-size: 0.82rem;
+    }
+    .records-table th, .records-table td {
+      padding: 0.45rem 0.75rem;
+      text-align: right;
+      white-space: nowrap;
+      border-bottom: 1px solid var(--border);
+    }
+    .records-table th:first-child, .records-table td:first-child {
+      text-align: left;
+      white-space: normal;
+    }
+    .records-table thead th {
+      background: var(--overlay);
+      color: var(--subtext);
+      font-weight: 600;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .records-table tbody tr:last-child td { border-bottom: none; }
+    .records-table tbody tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+    .records-table .sub {
+      display: block;
+      font-size: 0.7rem;
+      color: var(--subtext);
+      font-weight: 400;
+    }
+    .records-table td.is-record {
+      color: var(--green);
+      font-weight: 700;
+    }
   </style>
 </head>
 <body>
@@ -253,6 +302,68 @@
 </div>
 
 <main>
+  {% if records %}
+  <div class="records-section">
+    <h2 data-i18n="records_daytype_title">Streaks &amp; Annual Counts</h2>
+    <div class="table-scroll">
+      <table class="records-table">
+        <thead>
+          <tr>
+            <th data-i18n="records_col_category">Category</th>
+            <th data-i18n="records_col_record_streak">Record streak</th>
+            <th data-i18n="records_col_current_streak">Current streak</th>
+            <th data-i18n="records_col_record_count">Record annual count</th>
+            <th data-i18n="records_col_current_count">Current annual count</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in records.day_categories %}
+          <tr>
+            <td>{{ c.name }}</td>
+            <td>{{ c.record_streak_days }} d
+              {% if c.record_streak_range %}<span class="sub">{{ c.record_streak_range }}</span>{% endif %}
+            </td>
+            <td class="{{ 'is-record' if c.current_streak_is_record }}">{{ c.current_streak_days }} d</td>
+            <td>{{ c.record_count }}
+              {% if c.record_count_date %}<span class="sub">{{ c.record_count_date }}</span>{% endif %}
+            </td>
+            <td class="{{ 'is-record' if c.current_count_is_record }}">{{ c.current_count }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <h2 data-i18n="records_annual_title">Annual Aggregates — All-Time Range</h2>
+    <div class="table-scroll">
+      <table class="records-table">
+        <thead>
+          <tr>
+            <th data-i18n="records_col_metric">Metric</th>
+            <th data-i18n="records_col_highest">Highest ever</th>
+            <th data-i18n="records_col_lowest">Lowest ever</th>
+            <th data-i18n="records_col_current2">Current</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in records.continuous_metrics %}
+          <tr>
+            <td>{{ m.name }}</td>
+            <td>{{ m.highest }}{{ m.unit }}
+              {% if m.highest_date %}<span class="sub">{{ m.highest_date }}</span>{% endif %}
+            </td>
+            <td>{{ m.lowest }}{{ m.unit }}
+              {% if m.lowest_date %}<span class="sub">{{ m.lowest_date }}</span>{% endif %}
+            </td>
+            <td>{{ m.current }}{{ m.unit }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
   <div class="chart-grid">
     {% for chart in charts %}
     <div class="chart-card{% if chart.id == 'chart_weather' %} full-width{% endif %}"
@@ -362,6 +473,13 @@
       site_title: "81827 Waldtrudering Energy Dashboard",
       meter_through: "Meter through", weather_through: "Weather through", built_at: "Built",
       nav_energy: "Energy", nav_weather: "Weather",
+      records_daytype_title: "Streaks & Annual Counts",
+      records_annual_title: "Annual Aggregates — All-Time Range",
+      records_col_category: "Category", records_col_record_streak: "Record streak",
+      records_col_current_streak: "Current streak", records_col_record_count: "Record annual count",
+      records_col_current_count: "Current annual count",
+      records_col_metric: "Metric", records_col_highest: "Highest ever",
+      records_col_lowest: "Lowest ever", records_col_current2: "Current",
       btn_all: "All time", btn_3yr: "3 years", btn_1yr: "1 year",
       gas_daily_label:   "Gas — daily / 7d avg",
       gas_annual_label:  "Gas — annual",
@@ -398,6 +516,13 @@
       site_title: "81827 Waldtrudering Energie-Dashboard",
       meter_through: "Zähler bis", weather_through: "Wetter bis", built_at: "Erstellt",
       nav_energy: "Energie", nav_weather: "Wetter",
+      records_daytype_title: "Serien & Jahreszahlen",
+      records_annual_title: "Jahreswerte — Allzeit-Spanne",
+      records_col_category: "Kategorie", records_col_record_streak: "Rekordserie",
+      records_col_current_streak: "Aktuelle Serie", records_col_record_count: "Rekord Jahresanzahl",
+      records_col_current_count: "Aktuelle Jahresanzahl",
+      records_col_metric: "Messgröße", records_col_highest: "Höchstwert je",
+      records_col_lowest: "Tiefstwert je", records_col_current2: "Aktuell",
       btn_all: "Gesamt", btn_3yr: "3 Jahre", btn_1yr: "1 Jahr",
       gas_daily_label:   "Gas — täglich / 7T-Ø",
       gas_annual_label:  "Gas — jährlich",
@@ -434,6 +559,13 @@
       site_title: "81827 Waldtrudering Dashboard Energetico",
       meter_through: "Contatori al", weather_through: "Meteo al", built_at: "Creato",
       nav_energy: "Energia", nav_weather: "Meteo",
+      records_daytype_title: "Serie e Conteggi Annuali",
+      records_annual_title: "Aggregati Annuali — Intervallo Storico",
+      records_col_category: "Categoria", records_col_record_streak: "Serie record",
+      records_col_current_streak: "Serie attuale", records_col_record_count: "Conteggio annuale record",
+      records_col_current_count: "Conteggio annuale attuale",
+      records_col_metric: "Misura", records_col_highest: "Massimo storico",
+      records_col_lowest: "Minimo storico", records_col_current2: "Attuale",
       btn_all: "Tutto", btn_3yr: "3 anni", btn_1yr: "1 anno",
       gas_daily_label:   "Gas — giorn. / media 7g",
       gas_annual_label:  "Gas — annuale",
