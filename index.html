@@ -174,6 +174,53 @@
     }
     .record-tile .r-value + .r-value { margin-top: 0.2rem; }
     .record-tile .is-record { color: var(--green); }
+
+    .legend-tile {
+      border-left: 4px dashed var(--subtext);
+      opacity: 0.85;
+    }
+
+    .record-tile .r-hist {
+      margin-top: 0.55rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+    .r-hist-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .r-hist-tag {
+      flex: none;
+      width: 2.4em;
+      color: var(--subtext);
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .r-hist-track {
+      flex: 1 1 auto;
+      height: 8px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .r-hist-bar {
+      display: block;
+      height: 100%;
+      background: var(--tile-accent, var(--accent));
+      border-radius: 4px;
+    }
+    .r-hist-val {
+      flex: none;
+      width: 3.6em;
+      text-align: right;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
   </style>
 </head>
 <body>
@@ -185,7 +232,7 @@
   <span class="meta" data-i18n-tpl="meter_through" data-date="07 Sep 2026">Meter through 07 Sep 2026</span>
   <span class="meta" data-i18n-tpl="weather_through" data-date="07 Sep 2026">Weather through 07 Sep 2026</span>
   <div class="header-right">
-    <span class="meta" data-i18n-tpl="built_at" data-time="2026-09-08 09:56 UTC">Built 2026-09-08 09:56 UTC</span>
+    <span class="meta" data-i18n-tpl="built_at" data-time="2026-09-08 14:55 UTC">Built 2026-09-08 14:55 UTC</span>
     <div class="page-nav">
       <a href="index.html" class="active" data-i18n="nav_energy">Energy</a>
       <a href="weather.html" class="" data-i18n="nav_weather">Weather</a>
@@ -536,7 +583,8 @@
       meter_through: "Meter through", weather_through: "Weather through", built_at: "Built",
       nav_energy: "Energy", nav_weather: "Weather",
       records_record_current: "record (current)",
-      records_min_curr_max: "(min–curr–max)",
+      records_legend_parameter: "Parameter", records_legend_streak: "streak", records_legend_annual: "annual",
+      records_tag_min: "min", records_tag_curr: "curr", records_tag_max: "max",
       btn_all: "All time", btn_3yr: "3 years", btn_1yr: "1 year",
       gas_daily_label:   "Gas — daily / 7d avg",
       gas_annual_label:  "Gas — annual",
@@ -574,7 +622,8 @@
       meter_through: "Zähler bis", weather_through: "Wetter bis", built_at: "Erstellt",
       nav_energy: "Energie", nav_weather: "Wetter",
       records_record_current: "Rekord (aktuell)",
-      records_min_curr_max: "(min–akt–max)",
+      records_legend_parameter: "Parameter", records_legend_streak: "Serie", records_legend_annual: "jährlich",
+      records_tag_min: "min", records_tag_curr: "akt", records_tag_max: "max",
       btn_all: "Gesamt", btn_3yr: "3 Jahre", btn_1yr: "1 Jahr",
       gas_daily_label:   "Gas — täglich / 7T-Ø",
       gas_annual_label:  "Gas — jährlich",
@@ -612,7 +661,8 @@
       meter_through: "Contatori al", weather_through: "Meteo al", built_at: "Creato",
       nav_energy: "Energia", nav_weather: "Meteo",
       records_record_current: "record (attuale)",
-      records_min_curr_max: "(min–att–max)",
+      records_legend_parameter: "Parametro", records_legend_streak: "serie", records_legend_annual: "annuale",
+      records_tag_min: "min", records_tag_curr: "att", records_tag_max: "max",
       btn_all: "Tutto", btn_3yr: "3 anni", btn_1yr: "1 anno",
       gas_daily_label:   "Gas — giorn. / media 7g",
       gas_annual_label:  "Gas — annuale",
