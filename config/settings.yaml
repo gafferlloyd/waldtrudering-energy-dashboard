@@ -85,3 +85,12 @@ gas_prices:
     price: 0.091   # Grünwelt
   - from: "2026-07-11"
     price: 0.0931  # Montana, Grundpreis 14.02 EUR/mo
+
+# Date-based electricity EXPORT (feed-in) prices (EUR/kWh). Applies from the
+# given date onwards. Only one entry so far -- EEG feed-in tariff, flat rate,
+# confirmed with the household 2026-09 -- kept as a list (not a scalar) for
+# the same reason elec_prices/gas_prices are: a future tariff change
+# shouldn't require touching process.py, only this file.
+elec_export_prices:
+  - from: "2026-06-22"   # PV install / feed-in commissioning
+    price: 0.077   # EEG feed-in
