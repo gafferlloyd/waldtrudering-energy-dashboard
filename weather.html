@@ -229,7 +229,7 @@
   <span class="meta" data-i18n-tpl="meter_through" data-date="15 Sep 2026">Meter through 15 Sep 2026</span>
   <span class="meta" data-i18n-tpl="weather_through" data-date="15 Sep 2026">Weather through 15 Sep 2026</span>
   <div class="header-right">
-    <span class="meta" data-i18n-tpl="built_at" data-time="2026-09-16 17:10 UTC">Built 2026-09-16 17:10 UTC</span>
+    <span class="meta" data-i18n-tpl="built_at" data-time="2026-09-16 17:25 UTC">Built 2026-09-16 17:25 UTC</span>
     <div class="page-nav">
       <a href="index.html" class="" data-i18n="nav_energy">Energy</a>
       <a href="weather.html" class="active" data-i18n="nav_weather">Weather</a>
@@ -568,7 +568,7 @@
   // any y-extent the user drags is honoured as-is unless its lower edge is
   // negative, in which case just that edge is snapped to 0 -- the top of the
   // selection (and x) are left untouched.
-  ['chart_cum_gas', 'chart_cum_dd', 'chart_solar_credit'].forEach(id => {
+  ['chart_cum_gas', 'chart_cum_dd', 'chart_solar_annuity'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     el.on('plotly_relayout', function(ev) {
@@ -589,7 +589,7 @@
   const DATE_CHART_IDS = [
     'chart_gas', 'chart_elec', 'chart_water', 'chart_pv_system',
     'chart_efficiency', 'chart_eff_trend', 'chart_cost', 'chart_weather',
-    'chart_solar_credit'
+    'chart_solar_annuity'
   ];
   const LAST_DATE_ISO = '2026-09-15';
 
@@ -623,7 +623,7 @@
     'chart_gas','chart_elec','chart_water','chart_pv_system',
     'chart_consumption_split','chart_pv_destination','chart_energy_flow','chart_efficiency',
     'chart_gas_temp','chart_doy','chart_elec_doy','chart_cum_gas','chart_cum_dd',
-    'chart_eff_trend','chart_cost','chart_gdd','chart_weather','chart_solar_credit'
+    'chart_eff_trend','chart_cost','chart_gdd','chart_weather','chart_solar_annuity'
   ];
 
   const T = {
@@ -645,7 +645,7 @@
       solar_annual_label: "Solar export — annual",
       cost_label: "Annual Cost", efficiency_label: "Efficiency 3yr (1yr)", hot_water_label: "Hot Water Baseline",
       pv_not_captured_label: "PV Not Captured (min.)", pv_not_captured_unit: "confirmed clipping only",
-      solar_credit_label: "Cumulative Solar Credit", solar_credit_unit: "since PV install",
+      solar_annuity_label: "Cumulative Solar Annuity", solar_annuity_unit: "since PV install",
       kwh_avg: "kWh avg", mwh_year: "MWh / year", m3_avg: "m³ avg", m3_year: "m³ / year",
       kwh_day: "kWh/day", kwh_year: "kWh / year", kwh_day2: "kWh / day",
       gas_elec: "gas + electricity", kwh_m2_year: "kWh / m² / year", vs_last_year: "vs last year",
@@ -664,7 +664,7 @@
       chart_cum_dd:     "Cumulative Heating Degree Days by Heating Year (Jul → Jun)",
       chart_eff_trend:  "Heating Efficiency Development (kWh gas per degree-day)",
       chart_cost:       "Annual Energy Cost (rolling)",
-      chart_solar_credit: "Cumulative Solar Credit",
+      chart_solar_annuity: "Cumulative Solar Annuity",
       chart_gdd:        "Cumulative Gas Energy vs. Cumulative Degree Days",
       chart_weather:    "Weather Overview (rolling annual)  ·  dotted = 1992–2021 mean",
     },
@@ -686,7 +686,7 @@
       solar_annual_label: "Solareinspeisung — jährlich",
       cost_label: "Jahreskosten", efficiency_label: "Effizienz 3 Jahre (1 Jahr)", hot_water_label: "Warmwasserbedarf",
       pv_not_captured_label: "PV nicht genutzt (min.)", pv_not_captured_unit: "nur bestätigtes Clipping",
-      solar_credit_label: "Kumulierte Solar-Gutschrift", solar_credit_unit: "seit PV-Installation",
+      solar_annuity_label: "Kumulierte Solar-Annuität", solar_annuity_unit: "seit PV-Installation",
       kwh_avg: "kWh Ø", mwh_year: "MWh / Jahr", m3_avg: "m³ Ø", m3_year: "m³ / Jahr",
       kwh_day: "kWh/Tag", kwh_year: "kWh / Jahr", kwh_day2: "kWh / Tag",
       gas_elec: "Gas + Strom", kwh_m2_year: "kWh / m² / Jahr", vs_last_year: "vs. Vorjahr",
@@ -705,7 +705,7 @@
       chart_cum_dd:     "Kumulierte Heizgradtage nach Heizsaison (Jul → Jun)",
       chart_eff_trend:  "Entwicklung der Heizeffizienz (kWh Gas je Gradtag)",
       chart_cost:       "Jährliche Energiekosten (rollierend)",
-      chart_solar_credit: "Kumulierte Solar-Gutschrift",
+      chart_solar_annuity: "Kumulierte Solar-Annuität",
       chart_gdd:        "Kumulativer Gasimport vs. Heizgradtage",
       chart_weather:    "Wetterübersicht (rollierend jährlich)  ·  gepunktet = Mittel 1992–2021",
     },
@@ -727,7 +727,7 @@
       solar_annual_label: "Solare — annuale",
       cost_label: "Costo annuale", efficiency_label: "Efficienza 3 anni (1 anno)", hot_water_label: "Base acqua calda",
       pv_not_captured_label: "PV non catturato (min.)", pv_not_captured_unit: "solo clipping confermato",
-      solar_credit_label: "Credito Solare Cumulativo", solar_credit_unit: "dall'installazione FV",
+      solar_annuity_label: "Rendita Solare Cumulativa", solar_annuity_unit: "dall'installazione FV",
       kwh_avg: "kWh media", mwh_year: "MWh / anno", m3_avg: "m³ media", m3_year: "m³ / anno",
       kwh_day: "kWh/giorno", kwh_year: "kWh / anno", kwh_day2: "kWh / giorno",
       gas_elec: "gas + elettricità", kwh_m2_year: "kWh / m² / anno", vs_last_year: "vs. anno scorso",
@@ -746,7 +746,7 @@
       chart_cum_dd:     "Gradi-Giorno Cumulativi per Anno di Riscaldamento (Lug → Giu)",
       chart_eff_trend:  "Sviluppo Efficienza Riscaldamento (kWh gas per grado-giorno)",
       chart_cost:       "Costo Energetico Annuale (scorrevole)",
-      chart_solar_credit: "Credito Solare Cumulativo",
+      chart_solar_annuity: "Rendita Solare Cumulativa",
       chart_gdd:        "Gas Cumulativo vs. Gradi-Giorno",
       chart_weather:    "Panoramica Meteo (annuale scorrevole)  ·  punteggiato = media 1992–2021",
     }
