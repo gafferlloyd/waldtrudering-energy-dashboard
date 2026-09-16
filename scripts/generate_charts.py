@@ -646,7 +646,7 @@ def chart_cumulative_gas_by_year(daily: pd.DataFrame, year_groups: dict) -> go.F
     fig.update_layout(
         title="Cumulative Gas Import by Heating Year (Jul → Jun)",
         xaxis=_heating_year_xaxis(),
-        yaxis=dict(title="Cumulative Gas Import (kWh)", rangemode="tozero", fixedrange=True),
+        yaxis=dict(title="Cumulative Gas Import (kWh)", rangemode="tozero"),
     )
     return fig
 
@@ -667,7 +667,7 @@ def chart_cumulative_degree_days(daily: pd.DataFrame, year_groups: dict) -> go.F
     fig.update_layout(
         title="Cumulative Heating Degree Days by Heating Year (Jul → Jun)",
         xaxis=_heating_year_xaxis(),
-        yaxis=dict(title="Cumulative Degree Days", rangemode="tozero", fixedrange=True),
+        yaxis=dict(title="Cumulative Degree Days", rangemode="tozero"),
     )
     return fig
 
