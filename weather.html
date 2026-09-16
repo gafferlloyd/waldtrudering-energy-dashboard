@@ -229,7 +229,7 @@
   <span class="meta" data-i18n-tpl="meter_through" data-date="15 Sep 2026">Meter through 15 Sep 2026</span>
   <span class="meta" data-i18n-tpl="weather_through" data-date="15 Sep 2026">Weather through 15 Sep 2026</span>
   <div class="header-right">
-    <span class="meta" data-i18n-tpl="built_at" data-time="2026-09-16 09:35 UTC">Built 2026-09-16 09:35 UTC</span>
+    <span class="meta" data-i18n-tpl="built_at" data-time="2026-09-16 09:42 UTC">Built 2026-09-16 09:42 UTC</span>
     <div class="page-nav">
       <a href="index.html" class="" data-i18n="nav_energy">Energy</a>
       <a href="weather.html" class="active" data-i18n="nav_weather">Weather</a>
@@ -559,6 +559,31 @@
     });
     el.on('plotly_unhover', reset);
   })();
+
+  // ── Cumulative charts: free box-zoom, but never let y dip below 0 ───────────
+  // rangemode="tozero" only governs autorange (initial view, double-click
+  // reset) -- it doesn't constrain a manual box-zoom, which sets an explicit
+  // numeric range straight from the dragged rectangle. Correcting after the
+  // fact here (rather than blocking the drag) keeps zoom fully interactive:
+  // any y-extent the user drags is honoured as-is unless its lower edge is
+  // negative, in which case just that edge is snapped to 0 -- the top of the
+  // selection (and x) are left untouched.
+  ['chart_cum_gas', 'chart_cum_dd'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.on('plotly_relayout', function(ev) {
+      let ymin = null, ymax = null;
+      if ('yaxis.range[0]' in ev) {
+        ymin = ev['yaxis.range[0]'];
+        ymax = ev['yaxis.range[1]'];
+      } else if (Array.isArray(ev['yaxis.range'])) {
+        [ymin, ymax] = ev['yaxis.range'];
+      }
+      if (ymin !== null && ymin < 0) {
+        Plotly.relayout(id, { 'yaxis.range': [0, ymax] });
+      }
+    });
+  });
 
   // ── Time-range buttons ────────────────────────────────────────────────────
   const DATE_CHART_IDS = [
