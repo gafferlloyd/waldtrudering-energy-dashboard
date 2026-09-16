@@ -178,11 +178,11 @@ def main():
     else:
         stats["pv_not_captured_pct"] = None
 
-    # Cumulative solar credit — annual() returns 0.0 (not None) for an
+    # Cumulative solar annuity — annual() returns 0.0 (not None) for an
     # all-NaN column, so the "no PV data at all" case needs its own check.
-    stats["solar_credit_cumulative_eur"] = (
-        round(annual("credit_cumulative_eur"))
-        if daily["credit_cumulative_eur"].notna().any() else None
+    stats["solar_annuity_cumulative_eur"] = (
+        round(annual("annuity_cumulative_eur"))
+        if daily["annuity_cumulative_eur"].notna().any() else None
     )
 
     # ── 5. Render HTML ────────────────────────────────────────────────────────

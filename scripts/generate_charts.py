@@ -721,7 +721,7 @@ def chart_annual_cost(daily: pd.DataFrame) -> go.Figure:
     return fig
 
 
-def chart_solar_credit(daily: pd.DataFrame) -> go.Figure:
+def chart_solar_annuity(daily: pd.DataFrame) -> go.Figure:
     """Cumulative financial benefit attributable to the PV system since
     install, split by source: self-consumed house electricity (a grid
     purchase avoided), hot water diverted via AC-Thor (a gas purchase
@@ -739,31 +739,31 @@ def chart_solar_credit(daily: pd.DataFrame) -> go.Figure:
     combination already validated in chart_pv_destination's docstring
     (validate_palette.js, all checks pass against #1e1e2e); re-validated
     2026-09 for this chart's specific order, also passes clean."""
-    credit = daily[["credit_self_consumed_eur", "credit_hot_water_eur",
-                    "credit_export_eur", "credit_cumulative_eur"]].dropna()
+    annuity = daily[["annuity_self_consumed_eur", "annuity_hot_water_eur",
+                    "annuity_export_eur", "annuity_cumulative_eur"]].dropna()
 
     fig = go.Figure()
     fig.add_trace(go.Scatter(
-        x=credit.index, y=credit["credit_self_consumed_eur"].cumsum(),
+        x=annuity.index, y=annuity["annuity_self_consumed_eur"].cumsum(),
         name="Self-Consumed (House)", stackgroup="one",
         line=dict(color=_PALETTE[2], width=0.5),
     ))
     fig.add_trace(go.Scatter(
-        x=credit.index, y=credit["credit_hot_water_eur"].cumsum(),
+        x=annuity.index, y=annuity["annuity_hot_water_eur"].cumsum(),
         name="Hot Water (AC-Thor)", stackgroup="one",
         line=dict(color="#c98500", width=0.5),
     ))
     fig.add_trace(go.Scatter(
-        x=credit.index, y=credit["credit_export_eur"].cumsum(),
+        x=annuity.index, y=annuity["annuity_export_eur"].cumsum(),
         name="Exported to Grid", stackgroup="one",
         line=dict(color=_PALETTE[0], width=0.5),
     ))
     fig.add_trace(go.Scatter(
-        x=credit.index, y=credit["credit_cumulative_eur"],
+        x=annuity.index, y=annuity["annuity_cumulative_eur"],
         name="Total", line=dict(color=_PALETTE[3], width=2.5),
     ))
     fig.update_layout(
-        title="Cumulative Solar Credit",
+        title="Cumulative Solar Annuity",
         xaxis_title="Date",
         yaxis=dict(title="EUR (cumulative)", rangemode="tozero"),
     )
@@ -985,7 +985,7 @@ def build_all(data: dict) -> list[dict]:
         ("Cumulative Degree Days",  "chart_cum_dd",   chart_cumulative_degree_days(daily, year_groups)),
         ("Efficiency Development",  "chart_eff_trend",chart_efficiency_trend(daily)),
         ("Annual Energy Cost",      "chart_cost",     chart_annual_cost(daily)),
-        ("Cumulative Solar Credit", "chart_solar_credit", chart_solar_credit(daily)),
+        ("Cumulative Solar Annuity", "chart_solar_annuity", chart_solar_annuity(daily)),
         ("Gas Energy vs Degree Days", "chart_gdd",    chart_gas_degree_day_scatter(daily, year_groups)),
         ("Weather Overview",        "chart_weather",  chart_weather(daily, weather_dwd)),
     ]

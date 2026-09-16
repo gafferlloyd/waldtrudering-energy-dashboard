@@ -609,7 +609,7 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None,
     daily["cost_elec_annual"]  = (daily["use_elec_kwh"] * daily["price_elec"]).rolling(365, min_periods=180).sum()
     daily["cost_total_annual"] = daily["cost_gas_annual"] + daily["cost_elec_annual"]
 
-    # ── Cumulative solar credit (since PV install) ───────────────────────────
+    # ── Cumulative solar annuity (since PV install) ───────────────────────────
     # Confirmed formula — do not re-derive:
     #  1. Self-consumed solar for house, excl. hot water: only the portion that
     #     displaced a grid purchase, NOT literal total house electricity (would
@@ -624,21 +624,21 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None,
     # chart_pv_destination, which need it because they compute a residual) --
     # each term here reads its own metered column directly, so gating would
     # only zero out real money from an otherwise-fine partial day.
-    daily["credit_self_consumed_eur"] = (
+    daily["annuity_self_consumed_eur"] = (
         (daily["house_energy_kwh"] - daily["grid_import_total_kwh"]) * daily["price_elec"]
     )
-    daily["credit_hot_water_eur"] = daily["acthor_energy_kwh"] * daily["price_gas"]
-    daily["credit_export_eur"] = daily["grid_export_total_kwh"] * daily["price_elec_export"]
+    daily["annuity_hot_water_eur"] = daily["acthor_energy_kwh"] * daily["price_gas"]
+    daily["annuity_export_eur"] = daily["grid_export_total_kwh"] * daily["price_elec_export"]
     # sum(axis=1, min_count=1), not plain "+": a single gap in one component
     # (e.g. an acthor_energy_kwh outage) must not zero out the other two
     # components' real values for that day -- plain addition propagates any
-    # one NaN across the whole row, silently losing real credit (confirmed:
+    # one NaN across the whole row, silently losing real annuity (confirmed:
     # a 2-day acthor gap right after install dropped ~11 EUR of real
-    # self-consumed/export credit this way before this fix). min_count=1
+    # self-consumed/export annuity this way before this fix). min_count=1
     # still preserves the pre-install all-NaN case (sum of nothing is NaN,
     # not 0), which is what keeps the cumsum below NaN until real data starts.
-    credit_components = ["credit_self_consumed_eur", "credit_hot_water_eur", "credit_export_eur"]
-    daily["credit_total_eur"] = daily[credit_components].sum(axis=1, min_count=1)
+    annuity_components = ["annuity_self_consumed_eur", "annuity_hot_water_eur", "annuity_export_eur"]
+    daily["annuity_total_eur"] = daily[annuity_components].sum(axis=1, min_count=1)
 
     # Genuine since-install cumulative (NOT a rolling window, unlike the
     # cost_*_annual columns above). cumsum()'s default skipna=True gives this
@@ -646,7 +646,7 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None,
     # until the first real value, then starts cleanly -- no hardcoded install
     # date to keep in sync with the goodwe join, and a later single-day
     # outage shows as one gap without corrupting the running total.
-    daily["credit_cumulative_eur"] = daily["credit_total_eur"].cumsum()
+    daily["annuity_cumulative_eur"] = daily["annuity_total_eur"].cumsum()
 
     # Efficiency per m²  (1-year rolling and 3-year rolling)
     daily["efficiency_kwh_m2"]     = daily["gas_annual_kwh"] / floor_area
