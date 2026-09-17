@@ -723,23 +723,23 @@ def chart_annual_cost(daily: pd.DataFrame) -> go.Figure:
 
 def chart_annual_cost_fuel(daily: pd.DataFrame) -> go.Figure:
     """Placeholder: chart_annual_cost plus ICE (petrol/diesel) fuel spend as
-    an independent third line. "Total" here stays gas+electricity only,
-    unchanged from chart_annual_cost -- fuel isn't a substitute for either
-    yet, just a household expense tracked alongside them. Staged separately
-    until the EV comes online in spring, at which point fuel cost becomes a
-    genuine trade-off against grid electricity and folds into the main
-    chart instead. Amber (#E69F00, Okabe-Ito) chosen for CVD-safe separation
-    from this chart's existing blue/red/green (validate_palette.js, all
-    checks pass)."""
+    an independent third line -- and, unlike chart_annual_cost, "Total" here
+    is gas+electricity+fuel, the real household energy+transport spend.
+    Staged separately (rather than changing the original chart) until the
+    EV comes online in spring, at which point fuel cost becomes a genuine
+    trade-off against grid electricity and this chart's shape folds into the
+    main one instead. Amber (#E69F00, Okabe-Ito) chosen for CVD-safe
+    separation from this chart's existing blue/red/green (validate_palette.js,
+    all checks pass)."""
     fig = go.Figure()
     _s1 = daily.index[0] + pd.Timedelta(days=365)
     gas_cost  = daily["cost_gas_annual"].loc[_s1:].dropna() / 1000   # kEUR
     elec_cost = daily["cost_elec_annual"].loc[_s1:].dropna() / 1000
-    total     = daily["cost_total_annual"].loc[_s1:].dropna() / 1000
     fuel_cost = daily["fuel_annual_eur"].loc[_s1:].dropna() / 1000
+    total     = (daily["cost_total_annual"] + daily["fuel_annual_eur"]).loc[_s1:].dropna() / 1000
 
     fig.add_trace(go.Scatter(x=total.index, y=total.values,
-                             name="Total (Gas+Elec)", line=dict(color=_PALETTE[0], width=2)))
+                             name="Total", line=dict(color=_PALETTE[0], width=2)))
     fig.add_trace(go.Scatter(x=gas_cost.index, y=gas_cost.values,
                              name="Gas", line=dict(color=_PALETTE[3], width=1.5, dash="dot")))
     fig.add_trace(go.Scatter(x=elec_cost.index, y=elec_cost.values,
