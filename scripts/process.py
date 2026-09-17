@@ -359,6 +359,22 @@ def load_goodwe_snapshot(data_dir: Path) -> pd.DataFrame:
     return df.set_index("date")
 
 
+def load_ice_fuel_snapshot(data_dir: Path) -> pd.Series:
+    """Read the committed ICE (petrol/diesel) fuel-cost archive (see
+    scripts/export_ice_fuel_snapshot.py) -- one row per fill-up day, EUR
+    spent, spanning three vehicles in sequence since 2016. Placeholder data
+    source for chart_annual_cost_fuel until the EV comes online in spring,
+    at which point fuel cost folds into the main annual-cost chart instead.
+    Sparse/episodic by nature (fill-ups, not daily readings) -- reindexing
+    onto the daily calendar and summing is the caller's job, not this
+    loader's."""
+    path = data_dir / "ice_fuel_archive.csv"
+    if not path.exists():
+        return pd.Series(dtype=float, name="cost_eur")
+    df = pd.read_csv(path, parse_dates=["date"])
+    return df.set_index("date")["cost_eur"]
+
+
 # ── Main pipeline ─────────────────────────────────────────────────────────────
 
 def run(data_dir: Path | None = None, cache_dir: Path | None = None,
@@ -608,6 +624,27 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None,
     daily["cost_gas_annual"]   = (daily["use_gas_kwh"]  * daily["price_gas"]).rolling(365, min_periods=180).sum()
     daily["cost_elec_annual"]  = (daily["use_elec_kwh"] * daily["price_elec"]).rolling(365, min_periods=180).sum()
     daily["cost_total_annual"] = daily["cost_gas_annual"] + daily["cost_elec_annual"]
+
+    # ── ICE fuel cost (placeholder, staged apart from the main cost chart) ────
+    # Petrol/diesel spend across three vehicles in sequence since 2016 (see
+    # export_ice_fuel_snapshot.py) -- kept as its own rolling-annual series,
+    # shown alongside cost_total_annual in chart_annual_cost_fuel rather than
+    # folded into it, until the EV comes online in spring makes it a genuine
+    # substitute for a grid-electricity cost instead of a separate expense.
+    ice_fuel = load_ice_fuel_snapshot(data_dir)
+    if not ice_fuel.empty:
+        # 0 on every day within the logged coverage span that wasn't itself a
+        # fill-up (real -- fuel spend is episodic, not daily), NaN outside
+        # that span (no vehicle-fuel data available at all, not "no spend").
+        fuel_cost = pd.Series(0.0, index=daily.index)
+        fuel_cost[daily.index < ice_fuel.index.min()] = float("nan")
+        fuel_cost[daily.index > ice_fuel.index.max()] = float("nan")
+        covered = ice_fuel.index.intersection(daily.index)
+        fuel_cost.loc[covered] = ice_fuel.loc[covered]
+        daily["fuel_cost_eur"] = fuel_cost
+    else:
+        daily["fuel_cost_eur"] = float("nan")
+    daily["fuel_annual_eur"] = daily["fuel_cost_eur"].rolling(365, min_periods=180).sum()
 
     # ── Cumulative solar annuity (since PV install) ───────────────────────────
     # Confirmed formula — do not re-derive:

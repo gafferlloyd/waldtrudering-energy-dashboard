@@ -721,6 +721,38 @@ def chart_annual_cost(daily: pd.DataFrame) -> go.Figure:
     return fig
 
 
+def chart_annual_cost_fuel(daily: pd.DataFrame) -> go.Figure:
+    """Placeholder: chart_annual_cost plus ICE (petrol/diesel) fuel spend as
+    an independent third line. "Total" here stays gas+electricity only,
+    unchanged from chart_annual_cost -- fuel isn't a substitute for either
+    yet, just a household expense tracked alongside them. Staged separately
+    until the EV comes online in spring, at which point fuel cost becomes a
+    genuine trade-off against grid electricity and folds into the main
+    chart instead. Amber (#E69F00, Okabe-Ito) chosen for CVD-safe separation
+    from this chart's existing blue/red/green (validate_palette.js, all
+    checks pass)."""
+    fig = go.Figure()
+    _s1 = daily.index[0] + pd.Timedelta(days=365)
+    gas_cost  = daily["cost_gas_annual"].loc[_s1:].dropna() / 1000   # kEUR
+    elec_cost = daily["cost_elec_annual"].loc[_s1:].dropna() / 1000
+    total     = daily["cost_total_annual"].loc[_s1:].dropna() / 1000
+    fuel_cost = daily["fuel_annual_eur"].loc[_s1:].dropna() / 1000
+
+    fig.add_trace(go.Scatter(x=total.index, y=total.values,
+                             name="Total (Gas+Elec)", line=dict(color=_PALETTE[0], width=2)))
+    fig.add_trace(go.Scatter(x=gas_cost.index, y=gas_cost.values,
+                             name="Gas", line=dict(color=_PALETTE[3], width=1.5, dash="dot")))
+    fig.add_trace(go.Scatter(x=elec_cost.index, y=elec_cost.values,
+                             name="Electricity", line=dict(color=_PALETTE[2], width=1.5, dash="dot")))
+    fig.add_trace(go.Scatter(x=fuel_cost.index, y=fuel_cost.values,
+                             name="ICE Fuel", line=dict(color="#E69F00", width=1.5, dash="dot")))
+
+    fig.update_layout(title="Annual Energy + Fuel Cost (placeholder)",
+                      xaxis_title="Date", yaxis_title="EUR thousands / year",
+                      yaxis=dict(range=[0, 3]))
+    return fig
+
+
 def chart_solar_annuity(daily: pd.DataFrame) -> go.Figure:
     """Cumulative financial benefit attributable to the PV system since
     install, split by source: self-consumed house electricity (a grid
@@ -985,6 +1017,7 @@ def build_all(data: dict) -> list[dict]:
         ("Cumulative Degree Days",  "chart_cum_dd",   chart_cumulative_degree_days(daily, year_groups)),
         ("Efficiency Development",  "chart_eff_trend",chart_efficiency_trend(daily)),
         ("Annual Energy Cost",      "chart_cost",     chart_annual_cost(daily)),
+        ("Annual Energy + Fuel Cost (placeholder)", "chart_cost_fuel", chart_annual_cost_fuel(daily)),
         ("Cumulative Solar Annuity", "chart_solar_annuity", chart_solar_annuity(daily)),
         ("Gas Energy vs Degree Days", "chart_gdd",    chart_gas_degree_day_scatter(daily, year_groups)),
         ("Weather Overview",        "chart_weather",  chart_weather(daily, weather_dwd)),
