@@ -749,7 +749,7 @@ def chart_annual_cost_fuel(daily: pd.DataFrame) -> go.Figure:
 
     fig.update_layout(title="Annual Energy + Fuel Cost (placeholder)",
                       xaxis_title="Date", yaxis_title="EUR thousands / year",
-                      yaxis=dict(range=[0, 3]))
+                      yaxis=dict(range=[0, 5]))
     return fig
 
 
