@@ -492,6 +492,14 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None,
     for col in ["use_gas_m3", "use_elec_kwh", "use_elec_export_kwh", "use_water_m3", "use_gas_kwh"]:
         daily.loc[daily[col] < 0, col] = np.nan
 
+    # Electricity meter swap: the diff across it (old meter ~63,806 kWh ->
+    # new meter ~1 kWh) is hugely negative and was clipped to NaN just above,
+    # leaving a one-day hole in the daily series. Real import that day was
+    # ~0 (new meter 0.9 -> 1.0, goodwe 0.0), so fill 0 to keep it continuous.
+    meter_swap_day = pd.Timestamp("2026-07-08")
+    if meter_swap_day in daily.index and pd.isna(daily.loc[meter_swap_day, "use_elec_kwh"]):
+        daily.loc[meter_swap_day, "use_elec_kwh"] = 0.0
+
     # Degree days
     dd = np.maximum(0.0, base_temp - daily["tmit"])
     daily["degree_days"] = np.where(dd > 0, dd + dd_offset, 0.0)
