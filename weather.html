@@ -229,7 +229,7 @@
   <span class="meta" data-i18n-tpl="meter_through" data-date="21 Sep 2026">Meter through 21 Sep 2026</span>
   <span class="meta" data-i18n-tpl="weather_through" data-date="20 Sep 2026">Weather through 20 Sep 2026</span>
   <div class="header-right">
-    <span class="meta" data-i18n-tpl="built_at" data-time="2026-09-21 22:21 UTC">Built 2026-09-21 22:21 UTC</span>
+    <span class="meta" data-i18n-tpl="built_at" data-time="2026-09-22 07:44 UTC">Built 2026-09-22 07:44 UTC</span>
     <div class="page-nav">
       <a href="index.html" class="" data-i18n="nav_energy">Energy</a>
       <a href="weather.html" class="active" data-i18n="nav_weather">Weather</a>
@@ -568,7 +568,7 @@
   // any y-extent the user drags is honoured as-is unless its lower edge is
   // negative, in which case just that edge is snapped to 0 -- the top of the
   // selection (and x) are left untouched.
-  ['chart_cum_gas', 'chart_cum_dd', 'chart_solar_annuity'].forEach(id => {
+  ['chart_cum_gas', 'chart_cum_elec', 'chart_cum_dd', 'chart_solar_annuity'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     el.on('plotly_relayout', function(ev) {
@@ -622,7 +622,7 @@
   const CHART_IDS = [
     'chart_gas','chart_elec','chart_water','chart_pv_system',
     'chart_consumption_split','chart_pv_destination','chart_energy_flow','chart_efficiency',
-    'chart_gas_temp','chart_doy','chart_elec_doy','chart_cum_gas','chart_cum_dd',
+    'chart_gas_temp','chart_doy','chart_elec_doy','chart_cum_gas','chart_cum_elec','chart_cum_dd',
     'chart_eff_trend','chart_cost','chart_cost_fuel','chart_gdd','chart_weather','chart_solar_annuity'
   ];
 
@@ -661,6 +661,7 @@
       chart_doy:        "Gas Import by Day-of-Year",
       chart_elec_doy:   "Electricity Import by Day-of-Year",
       chart_cum_gas:    "Cumulative Gas Import by Heating Year (Jul → Jun)",
+      chart_cum_elec:   "Cumulative Electricity Import by Heating Year (Jul → Jun)",
       chart_cum_dd:     "Cumulative Heating Degree Days by Heating Year (Jul → Jun)",
       chart_eff_trend:  "Heating Efficiency Development (kWh gas per degree-day)",
       chart_cost:       "Annual Energy Cost (rolling)",
@@ -703,6 +704,7 @@
       chart_doy:        "Gasimport nach Jahrestag",
       chart_elec_doy:   "Stromimport nach Jahrestag",
       chart_cum_gas:    "Kumulativer Gasimport nach Heizsaison (Jul → Jun)",
+      chart_cum_elec:   "Kumulativer Stromimport nach Heizsaison (Jul → Jun)",
       chart_cum_dd:     "Kumulierte Heizgradtage nach Heizsaison (Jul → Jun)",
       chart_eff_trend:  "Entwicklung der Heizeffizienz (kWh Gas je Gradtag)",
       chart_cost:       "Jährliche Energiekosten (rollierend)",
@@ -745,6 +747,7 @@
       chart_doy:        "Importazione Gas per Giorno dell'Anno",
       chart_elec_doy:   "Importazione Elettricità per Giorno dell'Anno",
       chart_cum_gas:    "Gas Cumulativo per Anno di Riscaldamento (Lug → Giu)",
+      chart_cum_elec:   "Elettricità Cumulativa per Anno di Riscaldamento (Lug → Giu)",
       chart_cum_dd:     "Gradi-Giorno Cumulativi per Anno di Riscaldamento (Lug → Giu)",
       chart_eff_trend:  "Sviluppo Efficienza Riscaldamento (kWh gas per grado-giorno)",
       chart_cost:       "Costo Energetico Annuale (scorrevole)",
