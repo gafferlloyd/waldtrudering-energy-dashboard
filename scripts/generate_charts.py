@@ -651,6 +651,25 @@ def chart_cumulative_gas_by_year(daily: pd.DataFrame, year_groups: dict) -> go.F
     return fig
 
 
+def chart_cumulative_electricity_by_year(daily: pd.DataFrame, year_groups: dict) -> go.Figure:
+    fig = go.Figure()
+    current_label = _current_heating_label(daily)
+    for i, (label, ydf) in enumerate(sorted(year_groups.items())):
+        is_current = (label == current_label)
+        fig.add_trace(go.Scatter(
+            x=ydf["doy"], y=ydf["cum_elec_kwh"],
+            name=label,
+            line=dict(color=_yr_colour(i), width=2.5 if is_current else 1),
+            opacity=1.0 if is_current else 0.6,
+        ))
+    fig.update_layout(
+        title="Cumulative Electricity Import by Heating Year (Jul → Jun)",
+        xaxis=_heating_year_xaxis(),
+        yaxis=dict(title="Cumulative Electricity Import (kWh)", rangemode="tozero"),
+    )
+    return fig
+
+
 def chart_cumulative_degree_days(daily: pd.DataFrame, year_groups: dict) -> go.Figure:
     fig = go.Figure()
     current_label = _current_heating_label(daily)
@@ -1014,6 +1033,7 @@ def build_all(data: dict) -> list[dict]:
         ("Gas Import by Day-of-Year", "chart_doy",     chart_gas_day_of_year(daily, median_doy, recent_doy)),
         ("Electricity Import by Day-of-Year", "chart_elec_doy", chart_elec_day_of_year(daily, median_elec_doy, recent_elec_doy)),
         ("Cumulative Gas by Year",  "chart_cum_gas",  chart_cumulative_gas_by_year(daily, year_groups)),
+        ("Cumulative Electricity by Year", "chart_cum_elec", chart_cumulative_electricity_by_year(daily, year_groups)),
         ("Cumulative Degree Days",  "chart_cum_dd",   chart_cumulative_degree_days(daily, year_groups)),
         ("Efficiency Development",  "chart_eff_trend",chart_efficiency_trend(daily)),
         ("Annual Energy Cost",      "chart_cost",     chart_annual_cost(daily)),

@@ -714,9 +714,10 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None,
         # shifts the doy counter and makes the trace appear x-offset vs full years.
         if ydf.index[0] > start + pd.Timedelta(days=30):
             continue
-        ydf["doy"]         = range(1, len(ydf) + 1)
-        ydf["cum_gas_kwh"] = ydf["use_gas_kwh"].fillna(0).cumsum()
-        ydf["cum_dd"]      = ydf["degree_days"].fillna(0).cumsum()
+        ydf["doy"]          = range(1, len(ydf) + 1)
+        ydf["cum_gas_kwh"]  = ydf["use_gas_kwh"].fillna(0).cumsum()
+        ydf["cum_elec_kwh"] = ydf["use_elec_kwh"].fillna(0).cumsum()
+        ydf["cum_dd"]       = ydf["degree_days"].fillna(0).cumsum()
         label = f"{yr}/{str(yr + 1)[-2:]}"
         year_groups[label] = ydf
 
