@@ -195,11 +195,16 @@ def main():
     for page, page_charts, filename, page_records in [
         ("energy",  main_charts,    "index.html",   None),
         ("weather", weather_charts, "weather.html", records),
+        ("pv",      [],             "pv.html",      None),
     ]:
         html = render_html(page_charts, stats, page=page, records=page_records)
         out_path = output_dir / filename
         out_path.write_text(html, encoding="utf-8")
         print(f"  Written: {out_path}  ({out_path.stat().st_size:,} bytes)")
+    # PV heatmap graphics are rendered by goodwe_solar (pv_heatmap.py) and committed to data/
+    import shutil
+    for png in (ROOT / "data").glob("pv_heatmap_*.png"):
+        shutil.copy(png, output_dir / png.name)
     print("Done.")
 
 

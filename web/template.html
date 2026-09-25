@@ -140,6 +140,8 @@
       border-radius: 8px;
       overflow: hidden;
     }
+    .pv-heat { text-align: center; }
+    .pv-heat img { width: min(100%, 960px); height: auto; border-radius: 8px; border: 1px solid var(--border); }
     .chart-card.full-width { grid-column: 1 / -1; }
     .chart-card .plotly-graph-div { width: 100% !important; }
 
@@ -238,6 +240,7 @@
     <div class="page-nav">
       <a href="index.html" class="{{ 'active' if page == 'energy' }}" data-i18n="nav_energy">Energy</a>
       <a href="weather.html" class="{{ 'active' if page == 'weather' }}" data-i18n="nav_weather">Weather</a>
+      <a href="pv.html" class="{{ 'active' if page == 'pv' }}" data-i18n="nav_pv">PV Output</a>
     </div>
     <div class="lang-switcher">
       <button class="lang-btn" data-lang="en" title="English">🇬🇧</button>
@@ -375,6 +378,18 @@
   </div>
   {% endif %}
 
+  {% if page == 'pv' %}
+  <div class="pv-heat">
+    <img id="pv-heat-img" src="pv_heatmap_all.png" alt="Measured maximum PV output by sun azimuth and elevation">
+  </div>
+  <script>
+    const pvImg = {all: 'pv_heatmap_all.png', '3yr': 'pv_heatmap_3y.png', '1yr': 'pv_heatmap_1y.png'};
+    document.querySelectorAll('.time-btn').forEach(b => b.addEventListener('click', () => {
+      document.getElementById('pv-heat-img').src = pvImg[b.dataset.range] || pvImg.all;
+    }));
+  </script>
+  {% endif %}
+
   <div class="chart-grid">
     {% for chart in charts %}
     <div class="chart-card{% if chart.id == 'chart_weather' %} full-width{% endif %}"
@@ -509,7 +524,7 @@
     en: {
       site_title: "81827 Waldtrudering Energy Dashboard",
       meter_through: "Meter through", weather_through: "Weather through", built_at: "Built",
-      nav_energy: "Energy", nav_weather: "Weather",
+      nav_energy: "Energy", nav_weather: "Weather", nav_pv: "PV Output",
       records_record_current: "record (current)",
       records_legend_parameter: "Parameter", records_legend_streak: "streak", records_legend_annual: "annual",
       records_tag_min: "min", records_tag_curr: "curr", records_tag_max: "max",
@@ -552,7 +567,7 @@
     de: {
       site_title: "81827 Waldtrudering Energie-Dashboard",
       meter_through: "Zähler bis", weather_through: "Wetter bis", built_at: "Erstellt",
-      nav_energy: "Energie", nav_weather: "Wetter",
+      nav_energy: "Energie", nav_weather: "Wetter", nav_pv: "PV-Leistung",
       records_record_current: "Rekord (aktuell)",
       records_legend_parameter: "Parameter", records_legend_streak: "Serie", records_legend_annual: "jährlich",
       records_tag_min: "min", records_tag_curr: "akt", records_tag_max: "max",
@@ -595,7 +610,7 @@
     it: {
       site_title: "81827 Waldtrudering Dashboard Energetico",
       meter_through: "Contatori al", weather_through: "Meteo al", built_at: "Creato",
-      nav_energy: "Energia", nav_weather: "Meteo",
+      nav_energy: "Energia", nav_weather: "Meteo", nav_pv: "Produzione FV",
       records_record_current: "record (attuale)",
       records_legend_parameter: "Parametro", records_legend_streak: "serie", records_legend_annual: "annuale",
       records_tag_min: "min", records_tag_curr: "att", records_tag_max: "max",

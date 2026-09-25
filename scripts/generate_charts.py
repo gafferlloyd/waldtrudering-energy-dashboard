@@ -989,7 +989,7 @@ def chart_gas_degree_day_scatter(daily: pd.DataFrame, year_groups: dict) -> go.F
         ))
     fig.update_layout(title="Cumulative Gas Energy vs. Cumulative Degree Days",
                       xaxis_title="Cumulative Degree Days (°C·days)",
-                      yaxis_title="Cumulative Gas Energy (kWh)")
+                      yaxis=dict(title="Cumulative Gas Energy (kWh)", rangemode="tozero"))
     return fig
 
 

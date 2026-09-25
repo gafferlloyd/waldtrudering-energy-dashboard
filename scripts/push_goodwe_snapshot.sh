@@ -29,9 +29,18 @@ else
     exit 1
 fi
 
-if ! git diff --quiet -- data/goodwe_rollup_snapshot.csv; then
-    git add data/goodwe_rollup_snapshot.csv
-    if git commit -m "Update goodwe rollup snapshot" 2>&1 && git push 2>&1; then
+# Measured PV-output heatmaps (all-time / 3y / 1y) rendered from goodwe_solar's data.db
+for w in all 3y 1y; do
+    if /usr/bin/python3 /home/gareth/goodwe_solar/pv_heatmap.py --window "$w" --out "$REPO/data/pv_heatmap_$w.png" >/dev/null 2>&1; then
+        echo "Heatmap $w: ok"
+    else
+        echo "WARNING: heatmap $w render failed"
+    fi
+done
+
+if ! git diff --quiet -- data/goodwe_rollup_snapshot.csv || [ -n "$(git status --porcelain -- data/pv_heatmap_all.png data/pv_heatmap_3y.png data/pv_heatmap_1y.png)" ]; then
+    git add data/goodwe_rollup_snapshot.csv data/pv_heatmap_all.png data/pv_heatmap_3y.png data/pv_heatmap_1y.png
+    if git commit -m "Update goodwe rollup snapshot and PV heatmaps" 2>&1 && git push 2>&1; then
         echo "Snapshot commit+push: ok"
     else
         echo "WARNING: snapshot commit/push failed"
