@@ -99,6 +99,22 @@
     .time-btn:hover  { opacity: 0.85; }
     .time-btn.active { opacity: 1; border-color: var(--accent); background: var(--overlay); }
 
+    .view-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      cursor: pointer;
+      color: var(--text);
+      font-size: 0.85rem;
+      padding: 0.2rem 0.7rem;
+      opacity: 0.5;
+      transition: opacity 0.15s;
+    }
+    .view-btn:hover  { opacity: 0.85; }
+    .view-btn.active { opacity: 1; border-color: var(--accent); background: var(--overlay); }
+    .pv-view-bar { display: flex; gap: 0.5rem; align-items: center; justify-content: center; margin-bottom: 1rem; }
+    .pv-view-bar .ctl-label { font-size: 0.75rem; color: var(--subtext); text-transform: uppercase; letter-spacing: 0.05em; margin-right: 0.3rem; }
+
     .stats-bar {
       background: var(--surface);
       border-bottom: 1px solid var(--border);
@@ -231,7 +247,7 @@
   <span class="meta" data-i18n-tpl="meter_through" data-date="25 Sep 2026">Meter through 25 Sep 2026</span>
   <span class="meta" data-i18n-tpl="weather_through" data-date="25 Sep 2026">Weather through 25 Sep 2026</span>
   <div class="header-right">
-    <span class="meta" data-i18n-tpl="built_at" data-time="2026-09-26 11:03 UTC">Built 2026-09-26 11:03 UTC</span>
+    <span class="meta" data-i18n-tpl="built_at" data-time="2026-09-26 11:50 UTC">Built 2026-09-26 11:50 UTC</span>
     <div class="page-nav">
       <a href="index.html" class="active" data-i18n="nav_energy">Energy</a>
       <a href="weather.html" class="" data-i18n="nav_weather">Weather</a>
@@ -647,6 +663,7 @@
       site_title: "81827 Waldtrudering Energy Dashboard",
       meter_through: "Meter through", weather_through: "Weather through", built_at: "Built",
       nav_energy: "Energy", nav_weather: "Weather", nav_pv: "PV Output",
+      pv_view_label: "View", pv_view_polar: "Polar", pv_view_cart: "cos AOI",
       records_record_current: "record (current)",
       records_legend_parameter: "Parameter", records_legend_streak: "streak", records_legend_annual: "annual",
       records_tag_min: "min", records_tag_curr: "curr", records_tag_max: "max",
@@ -690,6 +707,7 @@
       site_title: "81827 Waldtrudering Energie-Dashboard",
       meter_through: "Zähler bis", weather_through: "Wetter bis", built_at: "Erstellt",
       nav_energy: "Energie", nav_weather: "Wetter", nav_pv: "PV-Leistung",
+      pv_view_label: "Ansicht", pv_view_polar: "Polar", pv_view_cart: "cos AOI",
       records_record_current: "Rekord (aktuell)",
       records_legend_parameter: "Parameter", records_legend_streak: "Serie", records_legend_annual: "jährlich",
       records_tag_min: "min", records_tag_curr: "akt", records_tag_max: "max",
@@ -733,6 +751,7 @@
       site_title: "81827 Waldtrudering Dashboard Energetico",
       meter_through: "Contatori al", weather_through: "Meteo al", built_at: "Creato",
       nav_energy: "Energia", nav_weather: "Meteo", nav_pv: "Produzione FV",
+      pv_view_label: "Vista", pv_view_polar: "Polare", pv_view_cart: "cos AOI",
       records_record_current: "record (attuale)",
       records_legend_parameter: "Parametro", records_legend_streak: "serie", records_legend_annual: "annuale",
       records_tag_min: "min", records_tag_curr: "att", records_tag_max: "max",
