@@ -201,10 +201,13 @@ def main():
         out_path = output_dir / filename
         out_path.write_text(html, encoding="utf-8")
         print(f"  Written: {out_path}  ({out_path.stat().st_size:,} bytes)")
-    # PV heatmap graphics are rendered by goodwe_solar (pv_heatmap.py) and committed to data/
+    # PV heatmap graphics (polar view: pv_heatmap_*.png; cos-AOI Cartesian
+    # view: pv_cosaoi_*.png) are rendered by goodwe_solar (pv_heatmap.py) and
+    # committed to data/
     import shutil
-    for png in (ROOT / "data").glob("pv_heatmap_*.png"):
-        shutil.copy(png, output_dir / png.name)
+    for pattern in ("pv_heatmap_*.png", "pv_cosaoi_*.png"):
+        for png in (ROOT / "data").glob(pattern):
+            shutil.copy(png, output_dir / png.name)
     print("Done.")
 
 

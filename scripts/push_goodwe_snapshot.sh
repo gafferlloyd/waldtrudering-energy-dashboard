@@ -29,17 +29,24 @@ else
     exit 1
 fi
 
-# Measured PV-output heatmaps (all-time / 3y / 1y) rendered from goodwe_solar's data.db
+# Measured PV-output heatmaps (all-time / 3y / 1y) rendered from goodwe_solar's data.db,
+# both the panel-frame polar view and the hour-of-day/cos(AOI) Cartesian view.
 for w in all 3y 1y; do
-    if /usr/bin/python3 /home/gareth/goodwe_solar/pv_heatmap.py --window "$w" --out "$REPO/data/pv_heatmap_$w.png" >/dev/null 2>&1; then
-        echo "Heatmap $w: ok"
+    if /usr/bin/python3 /home/gareth/goodwe_solar/pv_heatmap.py --window "$w" --view polar --out "$REPO/data/pv_heatmap_$w.png" >/dev/null 2>&1; then
+        echo "Heatmap $w (polar): ok"
     else
-        echo "WARNING: heatmap $w render failed"
+        echo "WARNING: heatmap $w (polar) render failed"
+    fi
+    if /usr/bin/python3 /home/gareth/goodwe_solar/pv_heatmap.py --window "$w" --view cart --out "$REPO/data/pv_cosaoi_$w.png" >/dev/null 2>&1; then
+        echo "Heatmap $w (cos AOI): ok"
+    else
+        echo "WARNING: heatmap $w (cos AOI) render failed"
     fi
 done
 
-if ! git diff --quiet -- data/goodwe_rollup_snapshot.csv || [ -n "$(git status --porcelain -- data/pv_heatmap_all.png data/pv_heatmap_3y.png data/pv_heatmap_1y.png)" ]; then
-    git add data/goodwe_rollup_snapshot.csv data/pv_heatmap_all.png data/pv_heatmap_3y.png data/pv_heatmap_1y.png
+PV_PNGS="data/pv_heatmap_all.png data/pv_heatmap_3y.png data/pv_heatmap_1y.png data/pv_cosaoi_all.png data/pv_cosaoi_3y.png data/pv_cosaoi_1y.png"
+if ! git diff --quiet -- data/goodwe_rollup_snapshot.csv || [ -n "$(git status --porcelain -- $PV_PNGS)" ]; then
+    git add data/goodwe_rollup_snapshot.csv $PV_PNGS
     if git commit -m "Update goodwe rollup snapshot and PV heatmaps" 2>&1 && git push 2>&1; then
         echo "Snapshot commit+push: ok"
     else
