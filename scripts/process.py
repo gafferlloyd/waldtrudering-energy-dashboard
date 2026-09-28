@@ -77,6 +77,17 @@ def load_meter_data(data_dir: Path, cache_dir: Path | None = None) -> pd.DataFra
 
 
 # ── Weather data ──────────────────────────────────────────────────────────────
+# DEAD CODE below (_load_weather_archive, _load_weather_fresh, load_weather_data):
+# nothing in run() calls load_weather_data() any more -- the live pipeline moved
+# to load_dwd_weather() (DWD Flughafen + LMU/Open-Meteo sunshine fallback) in the
+# "Migrate fully to DWD airport weather; drop LMU Garching" commit. data/weather_
+# archive.csv, cache/lmu_weather.csv and cache/weatherdata.csv (the Google Sheet)
+# are therefore NOT read by a live build and can look stale (they are -- last
+# touched Aug/Apr 2026) without that meaning anything is actually broken. Checked
+# these by mistake once already (2026-09-28) and reported a false "archive is
+# stale" alarm. Check load_dwd_weather()'s cache/
+# dwd_weather.csv instead for the real, current data. Left in place rather than
+# deleted in case the pre-DWD LMU-Garching path is ever wanted back.
 
 def _load_weather_archive(path: Path) -> pd.DataFrame:
     df = pd.read_csv(path, parse_dates=["date"])
