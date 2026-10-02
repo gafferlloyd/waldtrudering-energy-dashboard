@@ -511,6 +511,62 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None,
     if meter_swap_day in daily.index and pd.isna(daily.loc[meter_swap_day, "use_elec_kwh"]):
         daily.loc[meter_swap_day, "use_elec_kwh"] = 0.0
 
+    # Four further data-quality issues from the same PV-install/meter-swap
+    # transition, confirmed 2026-10-02 by cross-checking goodwe against the
+    # raw archive and the raw fresh-sheet rows directly (not estimated):
+    #
+    # 1. The inverter's own grid-IMPORT sensor read a flat 0 for 06-30 to
+    #    07-07 (the first days after PV install) while the archived utility
+    #    meter shows genuine, consistent ~5.5 kWh/day import -- real daily
+    #    readings (data/meter_archive.csv), not an interpolation artifact.
+    #    The import monitoring evidently wasn't wired/calibrated yet that
+    #    first week. Everything reading grid_import_total_kwh (the Energy
+    #    Flow Sankey, the annuity self-consumed calc) was silently treating
+    #    this real import as if it were full self-consumption.
+    _bad_grid_import_days = pd.date_range("2026-06-30", "2026-07-07")
+    _mi = daily.index.isin(_bad_grid_import_days)
+    _missing_import = daily.loc[_mi, "use_elec_kwh"] - daily.loc[_mi, "grid_import_total_kwh"]
+    daily.loc[_mi, "grid_import_total_kwh"] = daily.loc[_mi, "use_elec_kwh"]
+
+    # 1b. The inverter's own "load" register (house_energy_kwh's source,
+    #     via goodwe_solar's compute_period_stats) was blind to the SAME
+    #     grid-sourced consumption that week, not just the dedicated import
+    #     counter -- the house's own energy-balance identity (solar-direct +
+    #     battery-discharge + grid-import == house_energy_kwh, see
+    #     chart_energy_flow's cross-check) comes up short by almost exactly
+    #     the patched import amount on every one of these days (verified:
+    #     +5.6 on 07-02, +5.5 on 07-03, ... one-to-one with the fix above),
+    #     not some unrelated error. Real house consumption was the inverter's
+    #     own registered load plus the grid-sourced portion it couldn't see,
+    #     so add the same missing amount here too.
+    daily.loc[_mi, "house_energy_kwh"] = daily.loc[_mi, "house_energy_kwh"] + _missing_import
+
+    # 2. The mirror-image gap on EXPORT: the OLD meter (data/meter_archive.csv,
+    #    authoritative through 07-07) never had an export register at all --
+    #    load_meter_data() fills that gap with 0 out of necessity -- so
+    #    use_elec_export_kwh reads 0 for 06-30 to 07-07 even though the
+    #    inverter was genuinely exporting real surplus that whole week
+    #    (grid_export_total_kwh has no comparable reason to be wrong here;
+    #    export metering has worked since day one). Patch the meter-side
+    #    column from the trustworthy goodwe value for this span.
+    _bad_meter_export_days = pd.date_range("2026-06-30", "2026-07-07")
+    _me = daily.index.isin(_bad_meter_export_days)
+    daily.loc[_me, "use_elec_export_kwh"] = daily.loc[_me, "grid_export_total_kwh"]
+
+    # 3. A one-day artifact ON TOP of the above, specific to export: the
+    #    archive's 07-07 row (keep='first' in load_meter_data makes it win
+    #    over the fresh sheet's own, different 07-07 row -- see the fresh
+    #    CSV directly: 07-07 reads 0.9 kWh import / 21.0 kWh export) means
+    #    07-08's real diff gets taken against the archive's stale export=0
+    #    baseline instead of the fresh sheet's own 21.0, producing a bogus
+    #    +22 kWh spike (same root cause as the import-side meter-swap gap
+    #    fixed above, just not caught by the negative-only sanity clip,
+    #    since a spurious *positive* jump passes it silently). The fresh
+    #    sheet's own two rows bracket the swap with no such discontinuity
+    #    (21.0 -> 22.0), so that 1.0 kWh is the real number for 07-08.
+    if meter_swap_day in daily.index:
+        daily.loc[meter_swap_day, "use_elec_export_kwh"] = 1.0
+
     # Degree days
     dd = np.maximum(0.0, base_temp - daily["tmit"])
     daily["degree_days"] = np.where(dd > 0, dd + dd_offset, 0.0)
