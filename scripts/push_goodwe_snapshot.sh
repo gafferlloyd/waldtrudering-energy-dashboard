@@ -29,8 +29,10 @@ else
     exit 1
 fi
 
-# Measured PV-output heatmaps (all-time / 3y / 1y) rendered from goodwe_solar's data.db,
-# both the panel-frame polar view and the hour-of-day/cos(AOI) Cartesian view.
+# Measured PV-output heatmaps (all-time / 3y / 1y) rendered from goodwe_solar's data.db:
+# the panel-frame polar view, the hour-of-day/cos(AOI) Cartesian view, and the Potential
+# view (best value at any worse angle of incidence on the same bearing, propagated toward
+# boresight, masked to the az/el footprint actually measured so far).
 for w in all 3y 1y; do
     if /usr/bin/python3 /home/gareth/goodwe_solar/pv_heatmap.py --window "$w" --view polar --out "$REPO/data/pv_heatmap_$w.png" >/dev/null 2>&1; then
         echo "Heatmap $w (polar): ok"
@@ -42,9 +44,14 @@ for w in all 3y 1y; do
     else
         echo "WARNING: heatmap $w (cos AOI) render failed"
     fi
+    if /usr/bin/python3 /home/gareth/goodwe_solar/pv_heatmap.py --window "$w" --view potential --out "$REPO/data/pv_heatmap_potential_$w.png" >/dev/null 2>&1; then
+        echo "Heatmap $w (potential): ok"
+    else
+        echo "WARNING: heatmap $w (potential) render failed"
+    fi
 done
 
-PV_PNGS="data/pv_heatmap_all.png data/pv_heatmap_3y.png data/pv_heatmap_1y.png data/pv_cosaoi_all.png data/pv_cosaoi_3y.png data/pv_cosaoi_1y.png"
+PV_PNGS="data/pv_heatmap_all.png data/pv_heatmap_3y.png data/pv_heatmap_1y.png data/pv_cosaoi_all.png data/pv_cosaoi_3y.png data/pv_cosaoi_1y.png data/pv_heatmap_potential_all.png data/pv_heatmap_potential_3y.png data/pv_heatmap_potential_1y.png"
 if ! git diff --quiet -- data/goodwe_rollup_snapshot.csv || [ -n "$(git status --porcelain -- $PV_PNGS)" ]; then
     git add data/goodwe_rollup_snapshot.csv $PV_PNGS
     if git commit -m "Update goodwe rollup snapshot and PV heatmaps" 2>&1 && git push 2>&1; then
