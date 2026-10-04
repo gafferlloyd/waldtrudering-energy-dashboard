@@ -331,8 +331,6 @@ def chart_consumption_split(daily: pd.DataFrame) -> go.Figure:
         sort=False,
         textinfo="label+percent",
         hovertemplate="%{label}: %{value:.0f} kWh (%{percent})<extra></extra>",
-        domain=dict(x=[0, 0.62]),  # leave room at the right for the legend -- a full-width
-                                    # pie pushed its own slice labels under the legend box
     ))
     # Title is static (not the date span) -- the i18n switcher in template.html
     # replaces title.text wholesale on language change (see chart_weather's
@@ -389,7 +387,6 @@ def chart_pv_destination(daily: pd.DataFrame) -> go.Figure:
         sort=False,
         textinfo="label+percent",
         hovertemplate="%{label}: %{value:.0f} kWh (%{percent})<extra></extra>",
-        domain=dict(x=[0, 0.62]),
     ))
     fig.update_layout(title="PV Energy Destination")  # static -- see chart_consumption_split's note on i18n
     _add_period_caption(fig, complete.index[0], complete.index[-1])
@@ -1049,14 +1046,30 @@ def build_all(data: dict) -> list[dict]:
             paper_bgcolor="#1e1e2e",
             plot_bgcolor="#1e1e2e",
             font=dict(color="#cdd6f4", size=12),
-            legend=dict(bgcolor="rgba(0,0,0,0.3)", bordercolor="#45475a"),
-            margin=dict(l=55, r=20, t=50, b=50),
+            # Title left, legend right, both on the same row above the plot --
+            # a vertical side legend (Plotly's default) forces the plot area
+            # itself to shrink on a narrow mobile screen, sometimes down to
+            # nothing. Horizontal + anchored just above the plot keeps the
+            # plot full-width regardless of viewport width; it only costs
+            # extra vertical space (via the larger top margin below) when a
+            # chart has enough series that the legend wraps onto a second
+            # row, which is still cheaper than losing width on mobile.
+            title=dict(x=0.02, xanchor="left"),
+            legend=dict(
+                orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
+                bgcolor="rgba(0,0,0,0.3)", bordercolor="#45475a",
+            ),
+            margin=dict(l=55, r=20, t=70, b=50),
         )
         # Apply dark grid to all axes
         for axis in ["xaxis", "yaxis", "xaxis2", "yaxis2"]:
             if hasattr(fig.layout, axis):
                 getattr(fig.layout, axis).update(gridcolor="#313244", zerolinecolor="#45475a")
         if chart_id == "chart_weather":
+            # Weather page only: far more series than any energy-page chart
+            # (up to 6 subplot rows), so a top legend would wrap across
+            # several lines and push the whole plot down. Keep it below
+            # instead, where wrapping doesn't cost plot height.
             fig.update_layout(legend=dict(
                 orientation="h", yanchor="top", y=-0.04, xanchor="center", x=0.5,
             ))
