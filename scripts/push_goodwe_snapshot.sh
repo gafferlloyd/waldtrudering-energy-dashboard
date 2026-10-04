@@ -30,9 +30,9 @@ else
 fi
 
 # Measured PV-output heatmaps (all-time / 3y / 1y) rendered from goodwe_solar's data.db:
-# the panel-frame polar view, the hour-of-day/cos(AOI) Cartesian view, and the Potential
-# view (best value at any worse angle of incidence on the same bearing, propagated toward
-# boresight, masked to the az/el footprint actually measured so far). Each at two colour
+# the panel-frame polar view, the azimuth/AOI Cartesian view, and the Potential view (best
+# value at any worse angle of incidence on the same bearing, propagated toward boresight,
+# masked to the az/el footprint actually measured so far). Each at two colour
 # scales: the default 10kW, and 7kW -- the inverter's feed-in is curtailed to roughly 7kW,
 # so the 10kW scale alone compresses most real variation below that plateau into a narrow
 # red band.
