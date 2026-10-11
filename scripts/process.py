@@ -133,17 +133,23 @@ def load_dwd_weather(cache_dir: Path | None = None) -> pd.DataFrame | None:
     """Load DWD airport weather from cache/dwd_weather.csv, or None if absent.
 
     DWD's own sunshine sensor (SDK) has been dead since 2026-05-01. Wherever
-    DWD's sunshine is missing, backfill from LMU Munich-city
-    (cache/lmu_city_weather.csv) — never Garching, which runs a different
-    microclimate — and if LMU is ALSO missing for a date, fall back to
-    Open-Meteo's historical sunshine_h (cache/openmeteo_historical.csv).
-    DWD/LMU stay primary deliberately: they're real ground measurements,
-    Open-Meteo's historical sunshine is reanalysis-modeled, so it's a
-    last-resort tier, not a replacement (2026-09-07 decision — see
-    process.py's theoretical-PV block for why Open-Meteo's irradiance IS
-    trusted as primary there: that's a different question, about which
-    conversion model best predicts real generation, not about which
-    sunshine number is most authentic).
+    DWD's sunshine is missing, backfill through three tiers in order:
+      1. LMU Munich-city's daily table (cache/lmu_city_weather.csv) — never
+         Garching, which runs a different microclimate.
+      2. LMU Munich-city's hourly Zeitreihen SVG archive
+         (cache/lmu_svg_sunshine.csv, see fetch_lmu_svg_sunshine.py) — a
+         separately-maintained LMU system that can stay up when tier 1's
+         daily table has its own gap (confirmed 2026-10-11: the table had a
+         2026-09-24..09-30 hole the SVG archive didn't). Only ever has rows
+         for dates tier 1 already couldn't cover, so there's no ordering
+         ambiguity between them.
+      3. Open-Meteo's historical sunshine_h (cache/openmeteo_historical.csv)
+         — reanalysis-modeled, last resort, only once BOTH real LMU sources
+         are missing (2026-09-07 decision — see process.py's theoretical-PV
+         block for why Open-Meteo's irradiance IS trusted as primary there:
+         that's a different question, about which conversion model best
+         predicts real generation, not about which sunshine number is most
+         authentic).
 
     This is a plain NaN-fill at each tier: the moment a higher-priority
     source reports a real value again, it wins and the substitute stops
@@ -174,6 +180,18 @@ def load_dwd_weather(cache_dir: Path | None = None) -> pd.DataFrame | None:
         filled = gap & fill.notna()
         df.loc[filled, "sunshine_source"] = "lmu"
         df["sunshine"] = df["sunshine"].fillna(fill)
+
+    svg_path = cache_dir / "lmu_svg_sunshine.csv"
+    if svg_path.exists():
+        svg_df = pd.read_csv(svg_path, parse_dates=["date"])
+        if not svg_df.empty:
+            svg_df["sunshine"] = pd.to_numeric(svg_df["sunshine"], errors="coerce")
+            svg_sunshine = svg_df.dropna(subset=["date"]).set_index("date")["sunshine"]
+            gap = df["sunshine"].isna()
+            fill = svg_sunshine.reindex(df.index)
+            filled = gap & fill.notna()
+            df.loc[filled, "sunshine_source"] = "lmu_svg"
+            df["sunshine"] = df["sunshine"].fillna(fill)
 
     openmeteo = load_openmeteo_historical(cache_dir)
     if openmeteo is not None:

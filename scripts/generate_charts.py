@@ -901,27 +901,35 @@ def chart_weather(daily: pd.DataFrame, weather_dwd: pd.DataFrame | None = None) 
         fig.add_hline(y=refs[rk], line_color=clr, **REF_STYLE, row=3, col=1)
 
     # Sunshine sensor outage: DWD's own sensor (SDK) can go dark for a stretch.
-    # process.py backfills those dates from LMU Munich-city so the main line
-    # above already flows through the gap with real (if not airport-native)
-    # data. Overlay a dashed segment across exactly the backfilled dates so
-    # it's clear which stretch isn't the airport's own sensor — self-healing:
-    # once DWD sunshine resumes, sunshine_is_substitute goes false and this
-    # overlay simply stops appearing for those dates.
+    # process.py backfills those dates in tiers (recorded per-day in
+    # sunshine_source) so the main line above already flows through any gap
+    # with the best available data. One dashed overlay trace per tier —
+    # lmu/lmu_svg are real ground measurements from two independently-
+    # maintained LMU systems, openmeteo is reanalysis-modeled, worth
+    # distinguishing rather than lumping all three under one label.
+    # Self-healing: once a date's tier goes back to "dwd", it drops out of
+    # every substitute trace here automatically.
     sun_raw  = w["sunshine"].dropna()
     sun_roll = (roll(w["sunshine"]) * movar).dropna()
-    has_substitute = "sunshine_is_substitute" in w.columns and w["sunshine_is_substitute"].any()
+    has_source_col = "sunshine_source" in w.columns
+    has_substitute = has_source_col and (w["sunshine_source"].fillna("dwd") != "dwd").any()
     if has_substitute:
-        sub_dates = w.index[w["sunshine_is_substitute"]]
-        sub_roll = sun_roll.loc[sun_roll.index.intersection(sub_dates)]
-        if len(sub_roll):
-            fig.add_trace(go.Scatter(
-                x=sub_roll.index, y=sub_roll.values,
-                name="Sunshine (LMU city, DWD sensor down)",
-                mode="lines",
-                line=dict(color="#CCB974", dash="dash", width=1.5),
-                opacity=0.6,
-                showlegend=True,
-            ), row=3, col=1)
+        for source, label in [
+            ("lmu",       "Sunshine (LMU city, DWD sensor down)"),
+            ("lmu_svg",   "Sunshine (LMU city SVG archive, table gap too)"),
+            ("openmeteo", "Sunshine (modeled est., DWD+LMU down)"),
+        ]:
+            sub_dates = w.index[w["sunshine_source"] == source]
+            sub_roll = sun_roll.loc[sun_roll.index.intersection(sub_dates)]
+            if len(sub_roll):
+                fig.add_trace(go.Scatter(
+                    x=sub_roll.index, y=sub_roll.values,
+                    name=label,
+                    mode="lines",
+                    line=dict(color="#CCB974", dash="dash", width=1.5),
+                    opacity=0.6,
+                    showlegend=True,
+                ), row=3, col=1)
     elif len(sun_raw) > 0 and len(sun_roll) > 0:
         # Deeper fallback: no city backfill available either (e.g. cache not
         # yet fetched) — flat "same as last year" guess, same as before.
