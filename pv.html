@@ -244,10 +244,10 @@
 
 <header>
   <h1 data-i18n="site_title">81827 Waldtrudering Energy Dashboard</h1>
-  <span class="meta" data-i18n-tpl="meter_through" data-date="28 Oct 2026">Meter through 28 Oct 2026</span>
+  <span class="meta" data-i18n-tpl="meter_through" data-date="29 Oct 2026">Meter through 29 Oct 2026</span>
   <span class="meta" data-i18n-tpl="weather_through" data-date="28 Oct 2026">Weather through 28 Oct 2026</span>
   <div class="header-right">
-    <span class="meta" data-i18n-tpl="built_at" data-time="2026-10-29 11:40 UTC">Built 2026-10-29 11:40 UTC</span>
+    <span class="meta" data-i18n-tpl="built_at" data-time="2026-10-29 20:14 UTC">Built 2026-10-29 20:14 UTC</span>
     <div class="page-nav">
       <a href="index.html" class="" data-i18n="nav_energy">Energy</a>
       <a href="weather.html" class="" data-i18n="nav_weather">Weather</a>
@@ -281,6 +281,8 @@
     <span class="ctl-label" data-i18n="pv_scale_label" style="margin-left:14px;">Scale</span>
     <button class="view-btn" data-scale="7000">7 kW</button>
     <button class="view-btn active" data-scale="10000">10 kW</button>
+    <span class="ctl-label" data-i18n="pv_contour_label" style="margin-left:14px;">Contours</span>
+    <button class="view-btn" id="pv-contour-btn" data-i18n="pv_contour_btn">1 kW lines</button>
   </div>
   <div class="pv-heat">
     <img id="pv-heat-img" src="pv_heatmap_all.png" alt="Measured maximum PV output by sun azimuth and elevation">
@@ -297,12 +299,17 @@
       cart: 'Measured maximum PV output by azimuth and angle of incidence',
       potential: 'Potential maximum PV output, propagated from the best value at any worse angle of incidence on the same bearing',
     };
-    let pvView = 'polar', pvRange = 'all', pvScale = '10000';
+    let pvView = 'polar', pvRange = 'all', pvScale = '10000', pvContours = false;
     function pvRedraw() {
       const img = document.getElementById('pv-heat-img');
       const range = PV_RANGE_FILE[pvRange] || 'all';
       const suffix = pvScale === '7000' ? '_7kw' : '';
-      img.src = `${PV_BASENAME[pvView]}_${range}${suffix}.png`;
+      // Contour renders exist for Potential and AOI only (the raw polar map is too blocky to contour)
+      const cbtn = document.getElementById('pv-contour-btn');
+      cbtn.disabled = (pvView === 'polar');
+      cbtn.style.opacity = pvView === 'polar' ? 0.35 : '';
+      const csuffix = (pvContours && pvView !== 'polar') ? '_contours' : '';
+      img.src = `${PV_BASENAME[pvView]}_${range}${suffix}${csuffix}.png`;
       img.alt = pvAltText[pvView] + (pvScale === '7000' ? ' (7kW colour scale)' : '');
     }
     document.querySelectorAll('.time-btn').forEach(b => b.addEventListener('click', () => {
@@ -314,11 +321,17 @@
       document.querySelectorAll('[data-scale]').forEach(x => x.classList.toggle('active', x === b));
       pvRedraw();
     }));
+    document.getElementById('pv-contour-btn').addEventListener('click', e => {
+      pvContours = !pvContours;
+      e.currentTarget.classList.toggle('active', pvContours);
+      pvRedraw();
+    });
     document.querySelectorAll('.view-btn[data-view]').forEach(b => b.addEventListener('click', () => {
       pvView = b.dataset.view;
       document.querySelectorAll('.view-btn[data-view]').forEach(x => x.classList.toggle('active', x === b));
       pvRedraw();
     }));
+    pvRedraw();   // sets the initial disabled state of the contour button
   </script>
   
 
@@ -407,7 +420,7 @@
     'chart_efficiency', 'chart_eff_trend', 'chart_cost', 'chart_cost_fuel', 'chart_weather',
     'chart_solar_annuity'
   ];
-  const LAST_DATE_ISO = '2026-10-28';
+  const LAST_DATE_ISO = '2026-10-29';
 
   function setTimeRange(mode) {
     let update;
@@ -447,7 +460,7 @@
       site_title: "81827 Waldtrudering Energy Dashboard",
       meter_through: "Meter through", weather_through: "Weather through", built_at: "Built",
       nav_energy: "Energy", nav_weather: "Weather", nav_pv: "PV Output",
-      pv_view_label: "View", pv_view_polar: "Polar", pv_view_cart: "AOI", pv_view_potential: "Potential", pv_scale_label: "Scale",
+      pv_view_label: "View", pv_view_polar: "Polar", pv_view_cart: "AOI", pv_view_potential: "Potential", pv_scale_label: "Scale", pv_contour_label: "Contours", pv_contour_btn: "1 kW lines",
       records_record_current: "record (current)",
       records_legend_parameter: "Parameter", records_legend_streak: "streak", records_legend_annual: "annual",
       records_tag_min: "min", records_tag_curr: "curr", records_tag_max: "max",
@@ -491,7 +504,7 @@
       site_title: "81827 Waldtrudering Energie-Dashboard",
       meter_through: "Zähler bis", weather_through: "Wetter bis", built_at: "Erstellt",
       nav_energy: "Energie", nav_weather: "Wetter", nav_pv: "PV-Leistung",
-      pv_view_label: "Ansicht", pv_view_polar: "Polar", pv_view_cart: "AOI", pv_view_potential: "Potenzial", pv_scale_label: "Skala",
+      pv_view_label: "Ansicht", pv_view_polar: "Polar", pv_view_cart: "AOI", pv_view_potential: "Potenzial", pv_scale_label: "Skala", pv_contour_label: "Konturen", pv_contour_btn: "1-kW-Linien",
       records_record_current: "Rekord (aktuell)",
       records_legend_parameter: "Parameter", records_legend_streak: "Serie", records_legend_annual: "jährlich",
       records_tag_min: "min", records_tag_curr: "akt", records_tag_max: "max",
@@ -535,7 +548,7 @@
       site_title: "81827 Waldtrudering Dashboard Energetico",
       meter_through: "Contatori al", weather_through: "Meteo al", built_at: "Creato",
       nav_energy: "Energia", nav_weather: "Meteo", nav_pv: "Produzione FV",
-      pv_view_label: "Vista", pv_view_polar: "Polare", pv_view_cart: "AOI", pv_view_potential: "Potenziale", pv_scale_label: "Scala",
+      pv_view_label: "Vista", pv_view_polar: "Polare", pv_view_cart: "AOI", pv_view_potential: "Potenziale", pv_scale_label: "Scala", pv_contour_label: "Contorni", pv_contour_btn: "Linee da 1 kW",
       records_record_current: "record (attuale)",
       records_legend_parameter: "Parametro", records_legend_streak: "serie", records_legend_annual: "annuale",
       records_tag_min: "min", records_tag_curr: "att", records_tag_max: "max",
