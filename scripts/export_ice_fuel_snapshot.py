@@ -41,6 +41,26 @@ V60CC_CORRECTIONS = {
 }
 
 
+# The V60CC log is now also kept in Google Sheets (link-viewable; the local
+# xlsx went stale after 2026-09-17). New fills are picked up from there. 2026-11-02.
+V60CC_SHEET_CSV = ("https://docs.google.com/spreadsheets/d/"
+                   "1R7orjdWxxtr5dMRc0O5SiNYR-D659DLoxGI79NmIBxQ/export?format=csv")
+
+
+def extract_sheet_csv(url: str, date_col: int, cost_col: int) -> list[tuple[pd.Timestamp, float]]:
+    import csv, io, urllib.request
+    text = urllib.request.urlopen(url, timeout=30).read().decode("utf-8")
+    rows = []
+    for row in list(csv.reader(io.StringIO(text)))[1:]:
+        try:
+            d = pd.to_datetime(row[date_col], format="%d-%b-%Y")
+            c = float(row[cost_col])
+        except (ValueError, IndexError):
+            continue
+        rows.append((pd.Timestamp(d.date()), c))
+    return rows
+
+
 def extract(path: Path, sheet: str, date_col: int, cost_col: int) -> list[tuple[pd.Timestamp, float]]:
     wb = openpyxl.load_workbook(path, data_only=True, read_only=True)
     ws = wb[sheet]
@@ -57,10 +77,22 @@ def extract(path: Path, sheet: str, date_col: int, cost_col: int) -> list[tuple[
 def main():
     all_rows = []
     for path, sheet, date_col, cost_col in SOURCES:
-        if not path.exists():
-            print(f"  Skipping (not found): {path}")
+        rows = extract(path, sheet, date_col, cost_col) if path.exists() else []
+        if path.name == "Volvo_costing_V60CC.xlsx":
+            # Local xlsx = history; Google Sheet only contributes fills NEWER than
+            # the local file's last row. (The sheet copy lacks 5 fills the local
+            # file has -- 2024-03-31, 2024-04-05, 2025-02-08, 2025-03-15,
+            # 2025-12-27, ~EUR 383 -- so it must not replace the local history.)
+            try:
+                last = max((d for d, _ in rows), default=pd.Timestamp.min)
+                new = [(d, c) for d, c in extract_sheet_csv(V60CC_SHEET_CSV, date_col, cost_col) if d > last]
+                rows = rows + new
+                print(f"  V60CC: +{len(new)} fill(s) newer than {last.date()} from Google Sheet")
+            except Exception as e:
+                print(f"  V60CC: Google Sheet unavailable ({e}); local xlsx only")
+        if not rows:
+            print(f"  Skipping (no data): {path}")
             continue
-        rows = extract(path, sheet, date_col, cost_col)
         if path.name == "Volvo_costing_V60CC.xlsx":
             rows = [(d, V60CC_CORRECTIONS.get(d, c)) for d, c in rows]
         print(f"  {path.name}: {len(rows)} fill-ups, "

@@ -29,6 +29,9 @@ else
     exit 1
 fi
 
+# ICE fuel log snapshot (picks up new V60CC fills from the Google Sheet; 2026-11-02)
+/usr/bin/python3 scripts/export_ice_fuel_snapshot.py >/dev/null 2>&1 && echo "ICE fuel snapshot: ok" || echo "WARNING: ICE fuel export failed"
+
 # Measured PV-output heatmaps (all-time / 3y / 1y) rendered from goodwe_solar's data.db:
 # the panel-frame polar view, the azimuth/AOI Cartesian view, and the Potential view (best
 # value at any worse angle of incidence on the same bearing, propagated toward boresight,
@@ -69,8 +72,8 @@ for vb in "cart pv_cosaoi" "potential pv_heatmap_potential"; do
         done
     done
 done
-if ! git diff --quiet -- data/goodwe_rollup_snapshot.csv || [ -n "$(git status --porcelain -- $PV_PNGS)" ]; then
-    git add data/goodwe_rollup_snapshot.csv $PV_PNGS
+if ! git diff --quiet -- data/goodwe_rollup_snapshot.csv data/ice_fuel_archive.csv || [ -n "$(git status --porcelain -- $PV_PNGS)" ]; then
+    git add data/goodwe_rollup_snapshot.csv data/ice_fuel_archive.csv $PV_PNGS
     if git commit -m "Update goodwe rollup snapshot and PV heatmaps" 2>&1 && git push 2>&1; then
         echo "Snapshot commit+push: ok"
     else
