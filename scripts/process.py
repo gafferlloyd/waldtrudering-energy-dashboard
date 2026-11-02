@@ -738,10 +738,11 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None,
     #     displaced a grid purchase, NOT literal total house electricity (would
     #     double-count against cost_elec_annual, which bills the grid-imported
     #     portion at the same price already).
-    #  2. Hot water (AC-Thor): deliberate 1:1 kWh-for-kWh substitution for gas.
-    #     NOT boiler-efficiency-adjusted — explicitly deferred (2026-09) pending
-    #     more AC-Thor data to establish a real ratio. Don't "fix" this into an
-    #     assumed efficiency factor without new data backing it.
+    #  2. Hot water (AC-Thor): gas avoided = AC-Thor kWh / boiler_dhw_efficiency
+    #     (settings.yaml, 0.80). Was 1:1 until 2026-11-02 -- deferred in 2026-09
+    #     "pending more AC-Thor data"; the Jul-Oct 2026 data now supplies it:
+    #     AC-Thor heat / (pre-solar gas for the same calendar window minus 2026
+    #     actual gas) = 0.75-0.82 over 46-96 days. Raises this component by 25%.
     #  3. Exported to grid: grid_export_total_kwh * price_elec_export.
     # Deliberately NOT gated on rollup_complete (unlike chart_consumption_split/
     # chart_pv_destination, which need it because they compute a residual) --
@@ -750,7 +751,9 @@ def run(data_dir: Path | None = None, cache_dir: Path | None = None,
     daily["annuity_self_consumed_eur"] = (
         (daily["house_energy_kwh"] - daily["grid_import_total_kwh"]) * daily["price_elec"]
     )
-    daily["annuity_hot_water_eur"] = daily["acthor_energy_kwh"] * daily["price_gas"]
+    daily["annuity_hot_water_eur"] = (
+        daily["acthor_energy_kwh"] / cfg.get("boiler_dhw_efficiency", 1.0) * daily["price_gas"]
+    )
     daily["annuity_export_eur"] = daily["grid_export_total_kwh"] * daily["price_elec_export"]
     # sum(axis=1, min_count=1), not plain "+": a single gap in one component
     # (e.g. an acthor_energy_kwh outage) must not zero out the other two
