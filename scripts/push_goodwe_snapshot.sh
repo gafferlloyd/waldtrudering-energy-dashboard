@@ -40,7 +40,7 @@ fi
 # so the 10kW scale alone compresses most real variation below that plateau into a narrow
 # red band.
 PV_PNGS=""
-for vb in "polar pv_heatmap" "cart pv_cosaoi" "potential pv_heatmap_potential"; do
+for vb in "polar pv_heatmap" "cart pv_cosaoi" "elaz pv_elaz" "potential pv_heatmap_potential"; do
     set -- $vb; view=$1; base=$2
     for w in all 3y 1y; do
         for cs in "10000 " "7000 _7kw"; do
@@ -57,7 +57,7 @@ for vb in "polar pv_heatmap" "cart pv_cosaoi" "potential pv_heatmap_potential"; 
 done
 
 # Contour variants (1 kW iso-power lines over the heatmap) for the Potential and AOI views.
-for vb in "cart pv_cosaoi" "potential pv_heatmap_potential"; do
+for vb in "cart pv_cosaoi" "elaz pv_elaz" "potential pv_heatmap_potential"; do
     set -- $vb; view=$1; base=$2
     for w in all 3y 1y; do
         for cs in "10000 " "7000 _7kw"; do
