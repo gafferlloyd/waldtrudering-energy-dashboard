@@ -245,9 +245,9 @@
 <header>
   <h1 data-i18n="site_title">81827 Waldtrudering Energy Dashboard</h1>
   <span class="meta" data-i18n-tpl="meter_through" data-date="05 Nov 2026">Meter through 05 Nov 2026</span>
-  <span class="meta" data-i18n-tpl="weather_through" data-date="04 Nov 2026">Weather through 04 Nov 2026</span>
+  <span class="meta" data-i18n-tpl="weather_through" data-date="05 Nov 2026">Weather through 05 Nov 2026</span>
   <div class="header-right">
-    <span class="meta" data-i18n-tpl="built_at" data-time="2026-11-05 20:05 UTC">Built 2026-11-05 20:05 UTC</span>
+    <span class="meta" data-i18n-tpl="built_at" data-time="2026-11-06 10:43 UTC">Built 2026-11-06 10:43 UTC</span>
     <div class="page-nav">
       <a href="index.html" class="" data-i18n="nav_energy">Energy</a>
       <a href="weather.html" class="" data-i18n="nav_weather">Weather</a>
@@ -277,6 +277,7 @@
     <span class="ctl-label" data-i18n="pv_view_label">View</span>
     <button class="view-btn active" data-view="polar" data-i18n="pv_view_polar">Polar</button>
     <button class="view-btn" data-view="cart" data-i18n="pv_view_cart">AOI</button>
+    <button class="view-btn" data-view="elaz" data-i18n="pv_view_elaz">El/Az</button>
     <button class="view-btn" data-view="potential" data-i18n="pv_view_potential">Potential</button>
     <span class="ctl-label" data-i18n="pv_scale_label" style="margin-left:14px;">Scale</span>
     <button class="view-btn" data-scale="7000">7 kW</button>
@@ -292,11 +293,12 @@
     // basename varies by view, range by button, the 7kW suffix only exists
     // for the non-default scale (10kW files keep their original, suffix-less
     // names so nothing else that already links to them needs to change).
-    const PV_BASENAME = {polar: 'pv_heatmap', cart: 'pv_cosaoi', potential: 'pv_heatmap_potential'};
+    const PV_BASENAME = {polar: 'pv_heatmap', cart: 'pv_cosaoi', elaz: 'pv_elaz', potential: 'pv_heatmap_potential'};
     const PV_RANGE_FILE = {all: 'all', '3yr': '3y', '1yr': '1y'};
     const pvAltText = {
       polar: 'Measured maximum PV output by sun azimuth and elevation',
       cart: 'Measured maximum PV output by azimuth and angle of incidence',
+      elaz: 'Measured maximum PV output by sun elevation and azimuth, with cos(AOI) lines to the panel',
       potential: 'Potential maximum PV output, propagated from the best value at any worse angle of incidence on the same bearing',
     };
     let pvView = 'polar', pvRange = 'all', pvScale = '10000', pvContours = false;
@@ -460,7 +462,7 @@
       site_title: "81827 Waldtrudering Energy Dashboard",
       meter_through: "Meter through", weather_through: "Weather through", built_at: "Built",
       nav_energy: "Energy", nav_weather: "Weather", nav_pv: "PV Output",
-      pv_view_label: "View", pv_view_polar: "Polar", pv_view_cart: "AOI", pv_view_potential: "Potential", pv_scale_label: "Scale", pv_contour_label: "Contours", pv_contour_btn: "1 kW lines",
+      pv_view_label: "View", pv_view_polar: "Polar", pv_view_cart: "AOI", pv_view_elaz: "El/Az", pv_view_potential: "Potential", pv_scale_label: "Scale", pv_contour_label: "Contours", pv_contour_btn: "1 kW lines",
       records_record_current: "record (current)",
       records_legend_parameter: "Parameter", records_legend_streak: "streak", records_legend_annual: "annual",
       records_tag_min: "min", records_tag_curr: "curr", records_tag_max: "max",
@@ -504,7 +506,7 @@
       site_title: "81827 Waldtrudering Energie-Dashboard",
       meter_through: "Zähler bis", weather_through: "Wetter bis", built_at: "Erstellt",
       nav_energy: "Energie", nav_weather: "Wetter", nav_pv: "PV-Leistung",
-      pv_view_label: "Ansicht", pv_view_polar: "Polar", pv_view_cart: "AOI", pv_view_potential: "Potenzial", pv_scale_label: "Skala", pv_contour_label: "Konturen", pv_contour_btn: "1-kW-Linien",
+      pv_view_label: "Ansicht", pv_view_polar: "Polar", pv_view_cart: "AOI", pv_view_elaz: "Elev./Azim.", pv_view_potential: "Potenzial", pv_scale_label: "Skala", pv_contour_label: "Konturen", pv_contour_btn: "1-kW-Linien",
       records_record_current: "Rekord (aktuell)",
       records_legend_parameter: "Parameter", records_legend_streak: "Serie", records_legend_annual: "jährlich",
       records_tag_min: "min", records_tag_curr: "akt", records_tag_max: "max",
@@ -548,7 +550,7 @@
       site_title: "81827 Waldtrudering Dashboard Energetico",
       meter_through: "Contatori al", weather_through: "Meteo al", built_at: "Creato",
       nav_energy: "Energia", nav_weather: "Meteo", nav_pv: "Produzione FV",
-      pv_view_label: "Vista", pv_view_polar: "Polare", pv_view_cart: "AOI", pv_view_potential: "Potenziale", pv_scale_label: "Scala", pv_contour_label: "Contorni", pv_contour_btn: "Linee da 1 kW",
+      pv_view_label: "Vista", pv_view_polar: "Polare", pv_view_cart: "AOI", pv_view_elaz: "El/Az", pv_view_potential: "Potenziale", pv_scale_label: "Scala", pv_contour_label: "Contorni", pv_contour_btn: "Linee da 1 kW",
       records_record_current: "record (attuale)",
       records_legend_parameter: "Parametro", records_legend_streak: "serie", records_legend_annual: "annuale",
       records_tag_min: "min", records_tag_curr: "att", records_tag_max: "max",
