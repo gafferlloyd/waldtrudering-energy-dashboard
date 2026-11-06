@@ -72,6 +72,25 @@ for vb in "cart pv_cosaoi" "elaz pv_elaz" "potential pv_heatmap_potential"; do
         done
     done
 done
+# Potential (max-hold) variants of the AOI and El/Az views, plain and with 1 kW contours.
+for vb in "cart pv_cosaoi_potential" "elaz pv_elaz_potential"; do
+    set -- $vb; view=$1; base=$2
+    for w in all 3y 1y; do
+        for cs in "10000 " "7000 _7kw"; do
+            set -- $cs; cap=$1; suffix=$2
+            for ct in "" "_contours"; do
+                png="$REPO/data/${base}_${w}${suffix}${ct}.png"
+                flag=""; [ -n "$ct" ] && flag="--contours"
+                if /usr/bin/python3 /home/gareth/goodwe_solar/pv_heatmap.py --window "$w" --view "$view" --cap "$cap" --potential $flag --out "$png" >/dev/null 2>&1; then
+                    echo "Heatmap $w ($view potential, ${cap}W${ct}): ok"
+                else
+                    echo "WARNING: heatmap $w ($view potential, ${cap}W${ct}) render failed"
+                fi
+                PV_PNGS="$PV_PNGS data/${base}_${w}${suffix}${ct}.png"
+            done
+        done
+    done
+done
 if ! git diff --quiet -- data/goodwe_rollup_snapshot.csv data/ice_fuel_archive.csv || [ -n "$(git status --porcelain -- $PV_PNGS)" ]; then
     git add data/goodwe_rollup_snapshot.csv data/ice_fuel_archive.csv $PV_PNGS
     if git commit -m "Update goodwe rollup snapshot and PV heatmaps" 2>&1 && git push 2>&1; then
