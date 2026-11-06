@@ -247,7 +247,7 @@
   <span class="meta" data-i18n-tpl="meter_through" data-date="05 Nov 2026">Meter through 05 Nov 2026</span>
   <span class="meta" data-i18n-tpl="weather_through" data-date="05 Nov 2026">Weather through 05 Nov 2026</span>
   <div class="header-right">
-    <span class="meta" data-i18n-tpl="built_at" data-time="2026-11-06 11:03 UTC">Built 2026-11-06 11:03 UTC</span>
+    <span class="meta" data-i18n-tpl="built_at" data-time="2026-11-06 11:06 UTC">Built 2026-11-06 11:06 UTC</span>
     <div class="page-nav">
       <a href="index.html" class="" data-i18n="nav_energy">Energy</a>
       <a href="weather.html" class="" data-i18n="nav_weather">Weather</a>
@@ -283,6 +283,7 @@
     <button class="view-btn active" data-scale="10000">10 kW</button>
     <span class="ctl-label" style="margin-left:14px;">&nbsp;</span>
     <button class="view-btn" id="pv-pot-btn" data-i18n="pv_view_potential" title="Max-hold: best value ever recorded at a worse angle on the same bearing carries inward">Potential</button>
+    <button class="view-btn" id="pv-norm-btn" data-i18n="pv_norm_btn" title="Potential divided by cos(AOI): face-on-equivalent output, so the remaining variation is atmosphere (sun height) and shading, not panel angle">÷ cos(AOI)</button>
     <span class="ctl-label" data-i18n="pv_contour_label" style="margin-left:14px;">Contours</span>
     <button class="view-btn" id="pv-contour-btn" data-i18n="pv_contour_btn">1 kW lines</button>
   </div>
@@ -302,19 +303,22 @@
       elaz: 'Measured maximum PV output by sun elevation and azimuth, with cos(AOI) lines to the panel',
       potential: 'Potential maximum PV output, propagated from the best value at any worse angle of incidence on the same bearing',
     };
-    let pvView = 'polar', pvRange = 'all', pvScale = '10000', pvContours = false, pvPot = false;
+    let pvView = 'polar', pvRange = 'all', pvScale = '10000', pvContours = false, pvPot = false, pvNorm = false;
     function pvRedraw() {
       const img = document.getElementById('pv-heat-img');
       const range = PV_RANGE_FILE[pvRange] || 'all';
       const suffix = pvScale === '7000' ? '_7kw' : '';
       // Contour renders exist for Potential and AOI only (the raw polar map is too blocky to contour)
       const cbtn = document.getElementById('pv-contour-btn');
+      const nbtn = document.getElementById('pv-norm-btn');
+      nbtn.disabled = !pvPot; nbtn.style.opacity = pvPot ? '' : 0.35;
+      const norm = pvPot && pvNorm;   // own 4-14 kW scale -> ignores the 7/10 kW buttons
       const noCont = (pvView === 'polar' && !pvPot);   // raw polar cells are too blocky to contour
       cbtn.disabled = noCont;
       cbtn.style.opacity = noCont ? 0.35 : '';
       const csuffix = (pvContours && !noCont) ? '_contours' : '';
-      img.src = `${PV_BASENAME[pvView]}${pvPot ? '_potential' : ''}_${range}${suffix}${csuffix}.png`;
-      img.alt = (pvPot ? 'Potential (max-hold) — ' : '') + pvAltText[pvView] + (pvScale === '7000' ? ' (7kW colour scale)' : '');
+      img.src = `${PV_BASENAME[pvView]}${pvPot ? '_potential' : ''}${norm ? '_norm' : ''}_${range}${norm ? '' : suffix}${csuffix}.png`;
+      img.alt = (pvPot ? (pvNorm ? 'Potential (max-hold) ÷ cos(AOI) — ' : 'Potential (max-hold) — ') : '') + pvAltText[pvView] + ((pvScale === '7000' && !norm) ? ' (7kW colour scale)' : '');
     }
     document.querySelectorAll('.time-btn').forEach(b => b.addEventListener('click', () => {
       pvRange = b.dataset.range || 'all';
@@ -328,6 +332,11 @@
     document.getElementById('pv-pot-btn').addEventListener('click', e => {
       pvPot = !pvPot;
       e.currentTarget.classList.toggle('active', pvPot);
+      pvRedraw();
+    });
+    document.getElementById('pv-norm-btn').addEventListener('click', e => {
+      pvNorm = !pvNorm;
+      e.currentTarget.classList.toggle('active', pvNorm);
       pvRedraw();
     });
     document.getElementById('pv-contour-btn').addEventListener('click', e => {
@@ -469,7 +478,7 @@
       site_title: "81827 Waldtrudering Energy Dashboard",
       meter_through: "Meter through", weather_through: "Weather through", built_at: "Built",
       nav_energy: "Energy", nav_weather: "Weather", nav_pv: "PV Output",
-      pv_view_label: "View", pv_view_polar: "Polar", pv_view_cart: "AOI", pv_view_elaz: "El/Az", pv_view_potential: "Potential", pv_scale_label: "Scale", pv_contour_label: "Contours", pv_contour_btn: "1 kW lines",
+      pv_view_label: "View", pv_view_polar: "Polar", pv_view_cart: "AOI", pv_view_elaz: "El/Az", pv_view_potential: "Potential", pv_scale_label: "Scale", pv_contour_label: "Contours", pv_contour_btn: "1 kW lines", pv_norm_btn: "÷ cos(AOI)",
       records_record_current: "record (current)",
       records_legend_parameter: "Parameter", records_legend_streak: "streak", records_legend_annual: "annual",
       records_tag_min: "min", records_tag_curr: "curr", records_tag_max: "max",
@@ -513,7 +522,7 @@
       site_title: "81827 Waldtrudering Energie-Dashboard",
       meter_through: "Zähler bis", weather_through: "Wetter bis", built_at: "Erstellt",
       nav_energy: "Energie", nav_weather: "Wetter", nav_pv: "PV-Leistung",
-      pv_view_label: "Ansicht", pv_view_polar: "Polar", pv_view_cart: "AOI", pv_view_elaz: "Elev./Azim.", pv_view_potential: "Potenzial", pv_scale_label: "Skala", pv_contour_label: "Konturen", pv_contour_btn: "1-kW-Linien",
+      pv_view_label: "Ansicht", pv_view_polar: "Polar", pv_view_cart: "AOI", pv_view_elaz: "Elev./Azim.", pv_view_potential: "Potenzial", pv_scale_label: "Skala", pv_contour_label: "Konturen", pv_contour_btn: "1-kW-Linien", pv_norm_btn: "÷ cos(AOI)",
       records_record_current: "Rekord (aktuell)",
       records_legend_parameter: "Parameter", records_legend_streak: "Serie", records_legend_annual: "jährlich",
       records_tag_min: "min", records_tag_curr: "akt", records_tag_max: "max",
@@ -557,7 +566,7 @@
       site_title: "81827 Waldtrudering Dashboard Energetico",
       meter_through: "Contatori al", weather_through: "Meteo al", built_at: "Creato",
       nav_energy: "Energia", nav_weather: "Meteo", nav_pv: "Produzione FV",
-      pv_view_label: "Vista", pv_view_polar: "Polare", pv_view_cart: "AOI", pv_view_elaz: "El/Az", pv_view_potential: "Potenziale", pv_scale_label: "Scala", pv_contour_label: "Contorni", pv_contour_btn: "Linee da 1 kW",
+      pv_view_label: "Vista", pv_view_polar: "Polare", pv_view_cart: "AOI", pv_view_elaz: "El/Az", pv_view_potential: "Potenziale", pv_scale_label: "Scala", pv_contour_label: "Contorni", pv_contour_btn: "Linee da 1 kW", pv_norm_btn: "÷ cos(AOI)",
       records_record_current: "record (attuale)",
       records_legend_parameter: "Parametro", records_legend_streak: "serie", records_legend_annual: "annuale",
       records_tag_min: "min", records_tag_curr: "att", records_tag_max: "max",
