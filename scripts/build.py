@@ -209,7 +209,7 @@ def main():
     # view: pv_cosaoi_*.png) are rendered by goodwe_solar (pv_heatmap.py) and
     # committed to data/
     import shutil
-    for pattern in ("pv_heatmap_*.png", "pv_cosaoi_*.png"):
+    for pattern in ("pv_heatmap_*.png", "pv_cosaoi_*.png", "pv_elaz_*.png"):
         for png in (ROOT / "data").glob(pattern):
             shutil.copy(png, output_dir / png.name)
     print("Done.")
