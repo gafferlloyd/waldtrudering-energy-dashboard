@@ -91,6 +91,22 @@ for vb in "cart pv_cosaoi_potential" "elaz pv_elaz_potential"; do
         done
     done
 done
+# Potential / cos(AOI) (face-on-equivalent) variants: fixed 4-14 kW scale, so no 7 kW variants.
+for vb in "polar pv_heatmap_potential_norm" "cart pv_cosaoi_potential_norm" "elaz pv_elaz_potential_norm"; do
+    set -- $vb; view=$1; base=$2
+    for w in all 3y 1y; do
+        for ct in "" "_contours"; do
+            png="$REPO/data/${base}_${w}${ct}.png"
+            flag=""; [ -n "$ct" ] && flag="--contours"
+            if /usr/bin/python3 /home/gareth/goodwe_solar/pv_heatmap.py --window "$w" --view "$view" --potential --norm $flag --out "$png" >/dev/null 2>&1; then
+                echo "Heatmap $w ($view potential/cos${ct}): ok"
+            else
+                echo "WARNING: heatmap $w ($view potential/cos${ct}) render failed"
+            fi
+            PV_PNGS="$PV_PNGS data/${base}_${w}${ct}.png"
+        done
+    done
+done
 if ! git diff --quiet -- data/goodwe_rollup_snapshot.csv data/ice_fuel_archive.csv || [ -n "$(git status --porcelain -- $PV_PNGS)" ]; then
     git add data/goodwe_rollup_snapshot.csv data/ice_fuel_archive.csv $PV_PNGS
     if git commit -m "Update goodwe rollup snapshot and PV heatmaps" 2>&1 && git push 2>&1; then
