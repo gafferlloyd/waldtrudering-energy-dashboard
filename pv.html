@@ -157,6 +157,7 @@
       overflow: hidden;
     }
     .pv-heat { text-align: center; }
+    .pv-heat img.wide { width: min(100%, 1280px); }   /* AOI and El/Az are wide plots */
     .pv-heat img { width: min(100%, 960px); height: auto; border-radius: 8px; border: 1px solid var(--border); }
     .chart-card.full-width { grid-column: 1 / -1; }
     .chart-card .plotly-graph-div { width: 100% !important; }
@@ -245,9 +246,9 @@
 <header>
   <h1 data-i18n="site_title">81827 Waldtrudering Energy Dashboard</h1>
   <span class="meta" data-i18n-tpl="meter_through" data-date="09 Nov 2026">Meter through 09 Nov 2026</span>
-  <span class="meta" data-i18n-tpl="weather_through" data-date="08 Nov 2026">Weather through 08 Nov 2026</span>
+  <span class="meta" data-i18n-tpl="weather_through" data-date="09 Nov 2026">Weather through 09 Nov 2026</span>
   <div class="header-right">
-    <span class="meta" data-i18n-tpl="built_at" data-time="2026-11-10 08:59 UTC">Built 2026-11-10 08:59 UTC</span>
+    <span class="meta" data-i18n-tpl="built_at" data-time="2026-11-10 09:01 UTC">Built 2026-11-10 09:01 UTC</span>
     <div class="page-nav">
       <a href="index.html" class="" data-i18n="nav_energy">Energy</a>
       <a href="weather.html" class="" data-i18n="nav_weather">Weather</a>
@@ -318,6 +319,7 @@
       cbtn.style.opacity = noCont ? 0.35 : '';
       const csuffix = (pvContours && !noCont) ? '_contours' : '';
       img.src = `${PV_BASENAME[pvView]}${pvPot ? '_potential' : ''}${norm ? '_norm' : ''}_${range}${norm ? '' : suffix}${csuffix}.png`;
+      img.classList.toggle('wide', pvView !== 'polar');
       img.alt = (pvPot ? (pvNorm ? 'Potential (max-hold) ÷ cos(AOI) — ' : 'Potential (max-hold) — ') : '') + pvAltText[pvView] + ((pvScale === '7000' && !norm) ? ' (7kW colour scale)' : '');
     }
     document.querySelectorAll('.time-btn').forEach(b => b.addEventListener('click', () => {
